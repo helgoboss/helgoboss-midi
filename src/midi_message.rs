@@ -19,6 +19,7 @@ pub trait MidiMessage: Clone + PartialEq + Eq {
         data_byte_2: SevenBitValue,
     ) -> Self;
 
+    // TODO Why not panic instead of result? After all, this error can be avoided by programmer.
     fn from_bytes(
         status_byte: Byte,
         data_byte_1: SevenBitValue,
