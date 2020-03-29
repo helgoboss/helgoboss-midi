@@ -46,10 +46,7 @@ impl ParserForOneChannel {
             _ => return None,
         };
         match data.controller_number {
-            (0..=31) => {
-                self.process_value_msb(data.controller_number, data.control_value);
-                None
-            }
+            (0..=31) => self.process_value_msb(data.controller_number, data.control_value),
             (32..=63) => {
                 self.process_value_lsb(data.channel, data.controller_number, data.control_value)
             }
@@ -66,9 +63,10 @@ impl ParserForOneChannel {
         &mut self,
         msb_controller_number: SevenBitValue,
         value_msb: SevenBitValue,
-    ) {
+    ) -> Option<Midi14BitCcMessage> {
         self.msb_controller_number = Some(msb_controller_number);
         self.value_msb = Some(value_msb);
+        None
     }
 
     fn process_value_lsb(
@@ -93,10 +91,11 @@ impl ParserForOneChannel {
 
 #[cfg(test)]
 mod tests {
-    use crate::{Midi14BitCcMessageParser, MidiMessage, RawMidiMessage};
+    use super::*;
+    use crate::RawMidiMessage;
 
     #[test]
-    fn should_ignore_non_14_bit_contributing_midi_messages() {
+    fn should_ignore_non_contributing_midi_messages() {
         // Given
         let mut parser = Midi14BitCcMessageParser::new();
         // When
@@ -147,7 +146,7 @@ mod tests {
     }
 
     #[test]
-    fn should_ignore_non_14_bit_contributing_midi_messages_mixed() {
+    fn should_ignore_non_contributing_midi_messages_mixed() {
         // Given
         let mut parser = Midi14BitCcMessageParser::new();
         // When
