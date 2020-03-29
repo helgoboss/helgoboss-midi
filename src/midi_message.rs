@@ -1,12 +1,13 @@
+use crate::{
+    build_14_bit_value_from_two_7_bit_values, build_byte_from_nibbles,
+    extract_high_7_bit_value_from_14_bit_value, extract_high_nibble_from_byte,
+    extract_low_7_bit_value_from_14_bit_value, extract_low_nibble_from_byte, with_low_nibble_added,
+    Byte, FourteenBitValue, Nibble, SevenBitValue,
+};
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use std::convert::TryInto;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-
-type Byte = u8;
-type Nibble = u8;
-type SevenBitValue = u8;
-type FourteenBitValue = u16;
 
 /// Trait to be implemented by struct representing MIDI message. Only the four methods need to be
 /// implemented, the rest is done by default methods. The advantage of this architecture is that we
@@ -456,6 +457,11 @@ impl MidiMessage for StructuredMidiMessage {
         RawMidiMessage::from_bytes_raw(status_byte, data_byte_1, data_byte_2).to_structured()
     }
 
+    // Optimization (although probably not used anyway)
+    fn from_structured(msg: &StructuredMidiMessage) -> Self {
+        msg.clone()
+    }
+
     fn get_status_byte(&self) -> u8 {
         use StructuredMidiMessage::*;
         match self {
@@ -522,6 +528,11 @@ impl MidiMessage for StructuredMidiMessage {
             _ => 0,
         }
     }
+
+    // Optimization
+    fn to_structured(&self) -> StructuredMidiMessage {
+        self.clone()
+    }
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]
@@ -551,44 +562,6 @@ impl MidiMessage for RawMidiMessage {
     fn get_data_byte_2(&self) -> u8 {
         self.data_byte_2
     }
-}
-
-fn extract_high_nibble_from_byte(byte: Byte) -> Nibble {
-    (byte >> 4) & 0x0f
-}
-
-fn extract_low_nibble_from_byte(byte: Byte) -> Nibble {
-    byte & 0x0f
-}
-
-fn extract_high_7_bit_value_from_14_bit_value(value: FourteenBitValue) -> SevenBitValue {
-    debug_assert!(value < 16384);
-    ((value >> 7) & 0x7f) as u8
-}
-
-fn extract_low_7_bit_value_from_14_bit_value(value: FourteenBitValue) -> SevenBitValue {
-    debug_assert!(value < 16384);
-    (value & 0x7f) as u8
-}
-
-fn build_byte_from_nibbles(high_nibble: Nibble, low_nibble: Nibble) -> Byte {
-    debug_assert!(high_nibble <= 0xf);
-    debug_assert!(low_nibble <= 0xf);
-    (high_nibble << 4) | low_nibble
-}
-
-fn build_14_bit_value_from_two_7_bit_values(
-    high: SevenBitValue,
-    low: SevenBitValue,
-) -> FourteenBitValue {
-    debug_assert!(high <= 0x7f);
-    debug_assert!(low <= 0x7f);
-    ((high as u16) << 7) | (low as u16)
-}
-
-fn with_low_nibble_added(byte: Byte, low_nibble: Nibble) -> Byte {
-    debug_assert!(low_nibble <= 0xf);
-    byte | low_nibble
 }
 
 fn get_midi_message_kind_from_status_byte(
