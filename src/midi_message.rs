@@ -6,6 +6,7 @@ use crate::{
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use std::convert::TryInto;
+#[allow(unused_imports)]
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
@@ -536,8 +537,8 @@ impl MidiMessage for StructuredMidiMessage {
             NoteOn(data) => data.velocity,
             PolyphonicKeyPressure(data) => data.pressure_amount,
             ControlChange(data) => data.control_value,
-            ProgramChange(data) => 0,
-            ChannelPressure(data) => 0,
+            ProgramChange(_data) => 0,
+            ChannelPressure(_data) => 0,
             PitchBendChange(data) => {
                 extract_high_7_bit_value_from_14_bit_value(data.pitch_bend_value)
             }

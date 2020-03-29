@@ -14,7 +14,7 @@ mod midi_parameter_number_message_parser;
 pub use midi_parameter_number_message_parser::*;
 
 mod types;
-pub use types::*;
+use types::*;
 
 mod util;
-pub use util::*;
+use util::*;

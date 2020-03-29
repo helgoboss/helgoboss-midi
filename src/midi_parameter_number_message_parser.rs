@@ -1,5 +1,5 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, FourteenBitValue, Midi14BitCcMessage, MidiMessage,
+    build_14_bit_value_from_two_7_bit_values, FourteenBitValue, MidiMessage,
     MidiParameterNumberMessage, Nibble, SevenBitValue, StructuredMidiMessage,
 };
 

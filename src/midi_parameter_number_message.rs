@@ -1,6 +1,5 @@
 use crate::{
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
-    ControlChangeData, FourteenBitValue, MidiMessage, MidiMessageFactory, Nibble, SevenBitValue,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, FourteenBitValue, MidiMessage, MidiMessageFactory, Nibble, SevenBitValue,
     StructuredMidiMessage,
 };
 
