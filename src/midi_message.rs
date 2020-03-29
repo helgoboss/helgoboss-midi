@@ -12,6 +12,17 @@ use strum_macros::EnumIter;
 /// Trait to be implemented by struct representing MIDI message. Only the four methods need to be
 /// implemented, the rest is done by default methods. The advantage of this architecture is that we
 /// can have a unified API, no matter which underlying data structure is used.
+///
+/// Requires implementations to implement `Clone` because users should be able to clone MIDI
+/// messages even if the actual type is not known to them. (`Copy` is not required because this
+/// can't be achieved for some types, so that would be too restrictive).
+///
+/// Requires implementations to implement `PartialEq` and `Eq` because users should be able to
+/// check MIDI messages for equality even if the actual type is not known to them (only for
+/// checking MIDI messages of the same type ... in future we might add a default method to the trait
+/// which implements a byte-based equality check). Providing a `PartialEq` implementation for all
+/// types implementing `MidiMessage` would not be good because it wouldn't be possible to overwrite
+/// that implementation then.
 pub trait MidiMessage: Clone + PartialEq + Eq {
     unsafe fn from_bytes_raw(
         status_byte: Byte,
