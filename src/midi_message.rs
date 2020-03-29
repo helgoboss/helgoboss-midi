@@ -19,7 +19,12 @@ pub trait MidiMessage: Clone + PartialEq + Eq {
         data_byte_2: SevenBitValue,
     ) -> Self;
 
-    // TODO Why not panic instead of result? After all, this error can be avoided by programmer.
+    // Although we could argue that calling this function with illegal input values is a violation
+    // of its contract, this function returns a result rather than panicking. It's because - unlike
+    // the convenience factory functions - this function is primarily intended to be used in
+    // situations where the bytes come from somewhere else (e.g. are user-generated) and therefore
+    // acts a bit like a parse function where client code should be able to recover from wrong
+    // input.
     fn from_bytes(
         status_byte: Byte,
         data_byte_1: SevenBitValue,

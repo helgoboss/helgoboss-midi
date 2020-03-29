@@ -5,7 +5,7 @@ use crate::{
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct Midi14BitCcMessage {
+pub struct Midi14BitCcMessage {
     channel: Nibble,
     msb_controller_number: SevenBitValue,
     value: FourteenBitValue,

@@ -4,7 +4,7 @@ use crate::{
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-struct MidiParameterNumberMessage {
+pub struct MidiParameterNumberMessage {
     channel: Nibble,
     number: FourteenBitValue,
     value: FourteenBitValue,
