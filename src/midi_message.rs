@@ -8,10 +8,9 @@ type Nibble = u8;
 type SevenBitValue = u8;
 type FourteenBitValue = u16;
 
-/// Trait to be implemented by struct representing MIDI message. Only the three byte-returning
-/// methods need to be implemented, the rest is done by default methods. The advantage of this
-/// architecture is that we can have a unified API, no matter which underlying data structure
-/// is used.
+/// Trait to be implemented by struct representing MIDI message. Only the four methods need to be
+/// implemented, the rest is done by default methods. The advantage of this architecture is that we
+/// can have a unified API, no matter which underlying data structure is used.
 pub trait MidiMessage: Clone + PartialEq + Eq {
     unsafe fn from_bytes_raw(
         status_byte: Byte,
@@ -307,7 +306,8 @@ pub trait MidiMessage: Clone + PartialEq + Eq {
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive, EnumIter)]
 #[repr(u8)]
 pub enum MidiMessageKind {
-    // Channel messages = channel voice messages + channel mode messages (given value represents channel 0 status byte)
+    // Channel messages = channel voice messages + channel mode messages (given value represents
+    // channel 0 status byte)
     NoteOff = 0x80,
     NoteOn = 0x90,
     PolyphonicKeyPressure = 0xa0,
