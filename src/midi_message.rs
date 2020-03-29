@@ -9,155 +9,14 @@ use std::convert::TryInto;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-/// Trait to be implemented by struct representing MIDI message. Only the four methods need to be
-/// implemented, the rest is done by default methods. The advantage of this architecture is that we
-/// can have a unified API, no matter which underlying data structure is used.
+/// Trait to be implemented by struct representing MIDI message. Only the three byte-returning
+/// methods need to be implemented, the rest is done by default methods. The advantage of this
+/// architecture is that we can have a unified API, no matter which underlying data structure is
+/// used.
 ///
-/// Requires implementations to implement `Clone` because users should be able to clone MIDI
-/// messages even if the actual type is not known to them. (`Copy` is not required because this
-/// can't be achieved for some types, so that would be too restrictive).
-///
-/// Requires implementations to implement `PartialEq` and `Eq` because users should be able to
-/// check MIDI messages for equality even if the actual type is not known to them (only for
-/// checking MIDI messages of the same type ... in future we might add a default method to the trait
-/// which implements a byte-based equality check). Providing a `PartialEq` implementation for all
-/// types implementing `MidiMessage` would not be good because it wouldn't be possible to overwrite
-/// that implementation then.
-pub trait MidiMessage: Clone + PartialEq + Eq {
-    unsafe fn from_bytes_raw(
-        status_byte: Byte,
-        data_byte_1: SevenBitValue,
-        data_byte_2: SevenBitValue,
-    ) -> Self;
-
-    // Although we could argue that calling this function with illegal input values is a violation
-    // of its contract, this function returns a result rather than panicking. It's because - unlike
-    // the convenience factory functions - this function is primarily intended to be used in
-    // situations where the bytes come from somewhere else (e.g. are user-generated) and therefore
-    // acts a bit like a parse function where client code should be able to recover from wrong
-    // input.
-    fn from_bytes(
-        status_byte: Byte,
-        data_byte_1: SevenBitValue,
-        data_byte_2: SevenBitValue,
-    ) -> Result<Self, &'static str> {
-        get_midi_message_kind_from_status_byte(status_byte).map_err(|_| "Unknown status byte")?;
-        if data_byte_1 >= 0x7f {
-            return Err("Data byte 1 is too large");
-        }
-        if data_byte_2 >= 0x7f {
-            return Err("Data byte 2 is too large");
-        }
-        Ok(unsafe { Self::from_bytes_raw(status_byte, data_byte_1, data_byte_2) })
-    }
-
-    fn from_structured(msg: &StructuredMidiMessage) -> Self {
-        unsafe {
-            Self::from_bytes_raw(
-                msg.get_status_byte(),
-                msg.get_data_byte_1(),
-                msg.get_data_byte_2(),
-            )
-        }
-    }
-
-    fn channel_message(
-        kind: MidiMessageKind,
-        channel: Nibble,
-        data_1: SevenBitValue,
-        data_2: SevenBitValue,
-    ) -> Self {
-        debug_assert_eq!(
-            kind.get_super_kind().get_main_category(),
-            MidiMessageMainCategory::Channel
-        );
-        debug_assert!(channel < 16);
-        debug_assert!(data_1 < 128);
-        debug_assert!(data_2 < 128);
-        unsafe {
-            MidiMessage::from_bytes_raw(with_low_nibble_added(kind.into(), channel), data_1, data_2)
-        }
-    }
-
-    // TODO Create factory methods for system-common and system-exclusive messages
-    fn system_real_time_message(kind: MidiMessageKind) -> Self {
-        debug_assert_eq!(kind.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
-        unsafe { MidiMessage::from_bytes_raw(kind.into(), 0, 0) }
-    }
-
-    fn note_on(channel: Nibble, key_number: SevenBitValue, velocity: SevenBitValue) -> Self {
-        Self::channel_message(MidiMessageKind::NoteOn, channel, key_number, velocity)
-    }
-
-    fn note_off(channel: Nibble, key_number: SevenBitValue, velocity: SevenBitValue) -> Self {
-        Self::channel_message(MidiMessageKind::NoteOff, channel, key_number, velocity)
-    }
-
-    fn control_change(
-        channel: Nibble,
-        controller_number: SevenBitValue,
-        control_value: SevenBitValue,
-    ) -> Self {
-        Self::channel_message(
-            MidiMessageKind::ControlChange,
-            channel,
-            controller_number,
-            control_value,
-        )
-    }
-
-    fn program_change(channel: Nibble, program_number: SevenBitValue) -> Self {
-        Self::channel_message(MidiMessageKind::ProgramChange, channel, program_number, 0)
-    }
-
-    fn polyphonic_key_pressure(
-        channel: Nibble,
-        key_number: SevenBitValue,
-        pressure_amount: SevenBitValue,
-    ) -> Self {
-        Self::channel_message(
-            MidiMessageKind::PolyphonicKeyPressure,
-            channel,
-            key_number,
-            pressure_amount,
-        )
-    }
-
-    fn channel_pressure(channel: Nibble, pressure_amount: SevenBitValue) -> Self {
-        Self::channel_message(
-            MidiMessageKind::ChannelPressure,
-            channel,
-            pressure_amount,
-            0,
-        )
-    }
-    fn pitch_bend_change(channel: Nibble, pitch_bend_value: FourteenBitValue) -> Self {
-        Self::channel_message(
-            MidiMessageKind::PitchBendChange,
-            channel,
-            (pitch_bend_value & 0x7f) as SevenBitValue,
-            (pitch_bend_value >> 7) as SevenBitValue,
-        )
-    }
-    fn timing_clock() -> Self {
-        Self::system_real_time_message(MidiMessageKind::TimingClock)
-    }
-    fn start() -> Self {
-        Self::system_real_time_message(MidiMessageKind::Start)
-    }
-    fn continue_message() -> Self {
-        Self::system_real_time_message(MidiMessageKind::Continue)
-    }
-    fn stop() -> Self {
-        Self::system_real_time_message(MidiMessageKind::Stop)
-    }
-    fn active_sensing() -> Self {
-        Self::system_real_time_message(MidiMessageKind::ActiveSensing)
-    }
-    fn system_reset() -> Self {
-        Self::system_real_time_message(MidiMessageKind::SystemReset)
-    }
-
+/// Please also recommend the trait `MidiMessageFactory` for your struct if creating new MIDI
+/// messages programmatically should be supported.
+pub trait MidiMessage {
     fn get_status_byte(&self) -> Byte;
 
     fn get_data_byte_1(&self) -> SevenBitValue;
@@ -320,6 +179,144 @@ pub trait MidiMessage: Clone + PartialEq + Eq {
     }
 }
 
+/// Trait to be implemented by struct representing a MIDI message if it supports creation of various
+/// types of MIDI messages. Only one method needs to be implemented, the rest is done by default
+/// methods. The advantage of this architecture is that we can have a unified factory API, no matter
+/// which underlying data structure is used.
+pub trait MidiMessageFactory: Sized {
+    unsafe fn from_bytes_raw(
+        status_byte: Byte,
+        data_byte_1: SevenBitValue,
+        data_byte_2: SevenBitValue,
+    ) -> Self;
+
+    // Although we could argue that calling this function with illegal input values is a violation
+    // of its contract, this function returns a result rather than panicking. It's because - unlike
+    // the convenience factory functions - this function is primarily intended to be used in
+    // situations where the bytes come from somewhere else (e.g. are user-generated) and therefore
+    // acts a bit like a parse function where client code should be able to recover from wrong
+    // input.
+    fn from_bytes(
+        status_byte: Byte,
+        data_byte_1: SevenBitValue,
+        data_byte_2: SevenBitValue,
+    ) -> Result<Self, &'static str> {
+        get_midi_message_kind_from_status_byte(status_byte).map_err(|_| "Unknown status byte")?;
+        if data_byte_1 >= 0x7f {
+            return Err("Data byte 1 is too large");
+        }
+        if data_byte_2 >= 0x7f {
+            return Err("Data byte 2 is too large");
+        }
+        Ok(unsafe { Self::from_bytes_raw(status_byte, data_byte_1, data_byte_2) })
+    }
+
+    fn from_structured(msg: &StructuredMidiMessage) -> Self {
+        unsafe {
+            Self::from_bytes_raw(
+                msg.get_status_byte(),
+                msg.get_data_byte_1(),
+                msg.get_data_byte_2(),
+            )
+        }
+    }
+
+    fn channel_message(
+        kind: MidiMessageKind,
+        channel: Nibble,
+        data_1: SevenBitValue,
+        data_2: SevenBitValue,
+    ) -> Self {
+        debug_assert_eq!(
+            kind.get_super_kind().get_main_category(),
+            MidiMessageMainCategory::Channel
+        );
+        debug_assert!(channel < 16);
+        debug_assert!(data_1 < 128);
+        debug_assert!(data_2 < 128);
+        unsafe { Self::from_bytes_raw(with_low_nibble_added(kind.into(), channel), data_1, data_2) }
+    }
+
+    // TODO Create factory methods for system-common and system-exclusive messages
+    fn system_real_time_message(kind: MidiMessageKind) -> Self {
+        debug_assert_eq!(kind.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
+        unsafe { Self::from_bytes_raw(kind.into(), 0, 0) }
+    }
+
+    fn note_on(channel: Nibble, key_number: SevenBitValue, velocity: SevenBitValue) -> Self {
+        Self::channel_message(MidiMessageKind::NoteOn, channel, key_number, velocity)
+    }
+
+    fn note_off(channel: Nibble, key_number: SevenBitValue, velocity: SevenBitValue) -> Self {
+        Self::channel_message(MidiMessageKind::NoteOff, channel, key_number, velocity)
+    }
+
+    fn control_change(
+        channel: Nibble,
+        controller_number: SevenBitValue,
+        control_value: SevenBitValue,
+    ) -> Self {
+        Self::channel_message(
+            MidiMessageKind::ControlChange,
+            channel,
+            controller_number,
+            control_value,
+        )
+    }
+
+    fn program_change(channel: Nibble, program_number: SevenBitValue) -> Self {
+        Self::channel_message(MidiMessageKind::ProgramChange, channel, program_number, 0)
+    }
+
+    fn polyphonic_key_pressure(
+        channel: Nibble,
+        key_number: SevenBitValue,
+        pressure_amount: SevenBitValue,
+    ) -> Self {
+        Self::channel_message(
+            MidiMessageKind::PolyphonicKeyPressure,
+            channel,
+            key_number,
+            pressure_amount,
+        )
+    }
+
+    fn channel_pressure(channel: Nibble, pressure_amount: SevenBitValue) -> Self {
+        Self::channel_message(
+            MidiMessageKind::ChannelPressure,
+            channel,
+            pressure_amount,
+            0,
+        )
+    }
+    fn pitch_bend_change(channel: Nibble, pitch_bend_value: FourteenBitValue) -> Self {
+        Self::channel_message(
+            MidiMessageKind::PitchBendChange,
+            channel,
+            (pitch_bend_value & 0x7f) as SevenBitValue,
+            (pitch_bend_value >> 7) as SevenBitValue,
+        )
+    }
+    fn timing_clock() -> Self {
+        Self::system_real_time_message(MidiMessageKind::TimingClock)
+    }
+    fn start() -> Self {
+        Self::system_real_time_message(MidiMessageKind::Start)
+    }
+    fn continue_message() -> Self {
+        Self::system_real_time_message(MidiMessageKind::Continue)
+    }
+    fn stop() -> Self {
+        Self::system_real_time_message(MidiMessageKind::Stop)
+    }
+    fn active_sensing() -> Self {
+        Self::system_real_time_message(MidiMessageKind::ActiveSensing)
+    }
+    fn system_reset() -> Self {
+        Self::system_real_time_message(MidiMessageKind::SystemReset)
+    }
+}
+
 // The most low-level kind of a MIDI message
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive, EnumIter)]
 #[repr(u8)]
@@ -469,7 +466,7 @@ pub struct PitchBendChangeData {
     pub pitch_bend_value: FourteenBitValue,
 }
 
-impl MidiMessage for StructuredMidiMessage {
+impl MidiMessageFactory for StructuredMidiMessage {
     unsafe fn from_bytes_raw(status_byte: u8, data_byte_1: u8, data_byte_2: u8) -> Self {
         RawMidiMessage::from_bytes_raw(status_byte, data_byte_1, data_byte_2).to_structured()
     }
@@ -478,7 +475,9 @@ impl MidiMessage for StructuredMidiMessage {
     fn from_structured(msg: &StructuredMidiMessage) -> Self {
         msg.clone()
     }
+}
 
+impl MidiMessage for StructuredMidiMessage {
     fn get_status_byte(&self) -> u8 {
         use StructuredMidiMessage::*;
         match self {
@@ -559,7 +558,7 @@ pub struct RawMidiMessage {
     data_byte_2: u8,
 }
 
-impl MidiMessage for RawMidiMessage {
+impl MidiMessageFactory for RawMidiMessage {
     unsafe fn from_bytes_raw(status_byte: u8, data_byte_1: u8, data_byte_2: u8) -> Self {
         Self {
             status_byte,
@@ -567,7 +566,9 @@ impl MidiMessage for RawMidiMessage {
             data_byte_2,
         }
     }
+}
 
+impl MidiMessage for RawMidiMessage {
     fn get_status_byte(&self) -> u8 {
         self.status_byte
     }

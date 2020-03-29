@@ -92,7 +92,7 @@ impl ParserForOneChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::RawMidiMessage;
+    use crate::{MidiMessageFactory, RawMidiMessage};
 
     #[test]
     fn should_ignore_non_contributing_midi_messages() {

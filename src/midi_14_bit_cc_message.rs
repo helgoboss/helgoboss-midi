@@ -1,7 +1,7 @@
 use crate::{
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
-    FourteenBitValue, MidiMessage, MidiMessageKind, Nibble, RawMidiMessage, SevenBitValue,
-    StructuredMidiMessage,
+    FourteenBitValue, MidiMessage, MidiMessageFactory, MidiMessageKind, Nibble, RawMidiMessage,
+    SevenBitValue, StructuredMidiMessage,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -43,7 +43,7 @@ impl Midi14BitCcMessage {
         self.value
     }
 
-    pub fn build_midi_messages<T: MidiMessage>(&self) -> [T; 2] {
+    pub fn build_midi_messages<T: MidiMessageFactory>(&self) -> [T; 2] {
         [
             T::control_change(
                 self.channel,

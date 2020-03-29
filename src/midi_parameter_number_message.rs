@@ -1,6 +1,7 @@
 use crate::{
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
-    ControlChangeData, FourteenBitValue, MidiMessage, Nibble, SevenBitValue, StructuredMidiMessage,
+    ControlChangeData, FourteenBitValue, MidiMessage, MidiMessageFactory, Nibble, SevenBitValue,
+    StructuredMidiMessage,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -102,7 +103,7 @@ impl MidiParameterNumberMessage {
     }
 
     // If not 14-bit, this returns only 3 messages (the last one is None)
-    pub fn build_midi_messages<T: MidiMessage>(&self) -> [Option<T>; 4] {
+    pub fn build_midi_messages<T: MidiMessageFactory>(&self) -> [Option<T>; 4] {
         let mut messages = [None, None, None, None];
         let mut i = 0;
         // Number MSB
