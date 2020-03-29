@@ -8,3 +8,5 @@ edition = "2018"
 
 [dependencies]
 num_enum = "0.4.2"
+strum = "0.18.0"
+strum_macros = "0.18.0"
