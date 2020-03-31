@@ -1,6 +1,7 @@
 use crate::{
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, FourteenBitValue, MidiMessage, MidiMessageFactory, Nibble, SevenBitValue,
-    StructuredMidiMessage,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
+    ControlChangeData, FourteenBitValue, MidiMessage, MidiMessageFactory, Nibble, SevenBitValue,
+    StructuredMidiMessage, FOURTEEN_BIT_VALUE_MAX, NIBBLE_MAX, SEVEN_BIT_VALUE_MAX,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -51,9 +52,9 @@ impl MidiParameterNumberMessage {
         value: SevenBitValue,
         is_registered: bool,
     ) -> MidiParameterNumberMessage {
-        debug_assert!(channel < 16);
-        debug_assert!(number < 16384);
-        debug_assert!(value < 128);
+        debug_assert!(channel <= NIBBLE_MAX);
+        debug_assert!(number <= FOURTEEN_BIT_VALUE_MAX);
+        debug_assert!(value <= SEVEN_BIT_VALUE_MAX);
         MidiParameterNumberMessage {
             channel,
             number,
@@ -69,7 +70,7 @@ impl MidiParameterNumberMessage {
         value: FourteenBitValue,
         is_registered: bool,
     ) -> MidiParameterNumberMessage {
-        debug_assert!(channel < 16);
+        debug_assert!(channel <= NIBBLE_MAX);
         debug_assert!(number < 16384);
         debug_assert!(value < 16384);
         MidiParameterNumberMessage {
@@ -142,15 +143,17 @@ impl MidiParameterNumberMessage {
     }
 }
 
-pub fn could_be_part_of_parameter_number_message(msg: &impl MidiMessage) -> bool {
+pub fn msg_could_be_part_of_parameter_number_msg(msg: &impl MidiMessage) -> bool {
     match msg.to_structured() {
-        StructuredMidiMessage::ControlChange(data)
-            if matches!(data.controller_number, 98 | 99 | 100 | 101 | 38 | 6) =>
-        {
-            true
+        StructuredMidiMessage::ControlChange(data) => {
+            data_could_be_part_of_parameter_number_msg(&data)
         }
         _ => false,
     }
+}
+
+pub fn data_could_be_part_of_parameter_number_msg(data: &ControlChangeData) -> bool {
+    matches!(data.controller_number, 98 | 99 | 100 | 101 | 38 | 6)
 }
 
 #[cfg(test)]
@@ -215,34 +218,34 @@ mod tests {
         // Given
         // When
         // Then
-        assert!(could_be_part_of_parameter_number_message(
+        assert!(msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(2, 99, 3)
         ));
-        assert!(could_be_part_of_parameter_number_message(
+        assert!(msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(2, 98, 37)
         ));
-        assert!(could_be_part_of_parameter_number_message(
+        assert!(msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(2, 6, 126)
         ));
-        assert!(could_be_part_of_parameter_number_message(
+        assert!(msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(0, 101, 3)
         ));
-        assert!(could_be_part_of_parameter_number_message(
+        assert!(msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(0, 100, 36)
         ));
-        assert!(could_be_part_of_parameter_number_message(
+        assert!(msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(0, 38, 24)
         ));
-        assert!(could_be_part_of_parameter_number_message(
+        assert!(msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(0, 6, 117)
         ));
-        assert!(!could_be_part_of_parameter_number_message(
+        assert!(!msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(0, 5, 117)
         ));
-        assert!(!could_be_part_of_parameter_number_message(
+        assert!(!msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(0, 39, 117)
         ));
-        assert!(!could_be_part_of_parameter_number_message(
+        assert!(!msg_could_be_part_of_parameter_number_msg(
             &RawMidiMessage::control_change(0, 77, 2)
         ));
     }

@@ -1,16 +1,16 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, Midi14BitCcMessage, MidiMessage, Nibble,
-    SevenBitValue, StructuredMidiMessage,
+    SevenBitValue, StructuredMidiMessage, NIBBLE_COUNT,
 };
 
 pub struct Midi14BitCcMessageParser {
-    parser_by_channel: [ParserForOneChannel; 16],
+    parser_by_channel: [ParserForOneChannel; NIBBLE_COUNT as usize],
 }
 
 impl Midi14BitCcMessageParser {
     pub fn new() -> Midi14BitCcMessageParser {
         Midi14BitCcMessageParser {
-            parser_by_channel: [ParserForOneChannel::new(); 16],
+            parser_by_channel: [ParserForOneChannel::new(); NIBBLE_COUNT as usize],
         }
     }
 

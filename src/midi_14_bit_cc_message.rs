@@ -1,7 +1,7 @@
 use crate::{
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
     FourteenBitValue, MidiMessage, MidiMessageFactory, Nibble, SevenBitValue,
-    StructuredMidiMessage,
+    StructuredMidiMessage, FOURTEEN_BIT_VALUE_MAX, NIBBLE_MAX,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -17,9 +17,9 @@ impl Midi14BitCcMessage {
         msb_controller_number: SevenBitValue,
         value: FourteenBitValue,
     ) -> Midi14BitCcMessage {
-        debug_assert!(channel < 16);
+        debug_assert!(channel <= NIBBLE_MAX);
         debug_assert!(msb_controller_number < 32);
-        debug_assert!(value < 16384);
+        debug_assert!(value <= FOURTEEN_BIT_VALUE_MAX);
         Midi14BitCcMessage {
             channel,
             msb_controller_number,

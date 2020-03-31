@@ -2,7 +2,7 @@ use crate::{
     build_14_bit_value_from_two_7_bit_values, build_byte_from_nibbles,
     extract_high_7_bit_value_from_14_bit_value, extract_high_nibble_from_byte,
     extract_low_7_bit_value_from_14_bit_value, extract_low_nibble_from_byte, with_low_nibble_added,
-    Byte, FourteenBitValue, Nibble, SevenBitValue,
+    Byte, FourteenBitValue, Nibble, SevenBitValue, NIBBLE_MAX, SEVEN_BIT_VALUE_MAX,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use std::convert::TryInto;
@@ -232,9 +232,9 @@ pub trait MidiMessageFactory: Sized {
             kind.get_super_kind().get_main_category(),
             MidiMessageMainCategory::Channel
         );
-        debug_assert!(channel < 16);
-        debug_assert!(data_1 < 128);
-        debug_assert!(data_2 < 128);
+        debug_assert!(channel <= NIBBLE_MAX);
+        debug_assert!(data_1 <= SEVEN_BIT_VALUE_MAX);
+        debug_assert!(data_2 <= SEVEN_BIT_VALUE_MAX);
         unsafe { Self::from_bytes_raw(with_low_nibble_added(kind.into(), channel), data_1, data_2) }
     }
 
@@ -600,6 +600,7 @@ fn get_midi_message_kind_from_status_byte(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::NIBBLE_MAX;
 
     #[test]
     fn from_bytes_ok() {
@@ -1097,7 +1098,7 @@ mod tests {
         // Given
         let messages: Vec<RawMidiMessage> = MidiMessageKind::iter()
             .flat_map(move |kind| match kind.get_super_kind() {
-                MidiMessageSuperKind::Channel => (0..16)
+                MidiMessageSuperKind::Channel => (0..=NIBBLE_MAX)
                     .map(|ch| RawMidiMessage::channel_message(kind, ch, 0, 0))
                     .collect(),
                 MidiMessageSuperKind::SystemRealTime => {
