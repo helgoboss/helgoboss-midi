@@ -61,7 +61,9 @@ impl Midi14BitCcMessage {
 
 pub fn could_be_part_of_14_bit_cc_message(msg: &impl MidiMessage) -> bool {
     match msg.to_structured() {
-        StructuredMidiMessage::ControlChange(data) if data.controller_number < 64 => true,
+        StructuredMidiMessage::ControlChange {
+            controller_number, ..
+        } => controller_number < 64,
         _ => false,
     }
 }

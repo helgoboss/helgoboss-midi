@@ -45,18 +45,21 @@ impl ParserForOneChannel {
     }
 
     fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiParameterNumberMessage> {
-        let data = match msg.to_structured() {
-            StructuredMidiMessage::ControlChange(d) => d,
+        match msg.to_structured() {
+            StructuredMidiMessage::ControlChange {
+                channel,
+                controller_number,
+                control_value,
+            } => match controller_number {
+                98 => self.process_number_lsb(control_value, false),
+                99 => self.process_number_msb(control_value, false),
+                100 => self.process_number_lsb(control_value, true),
+                101 => self.process_number_msb(control_value, true),
+                38 => self.process_value_lsb(control_value),
+                6 => self.process_value_msb(channel, control_value),
+                _ => None,
+            },
             _ => return None,
-        };
-        match data.controller_number {
-            98 => self.process_number_lsb(data.control_value, false),
-            99 => self.process_number_msb(data.control_value, false),
-            100 => self.process_number_lsb(data.control_value, true),
-            101 => self.process_number_msb(data.control_value, true),
-            38 => self.process_value_lsb(data.control_value),
-            6 => self.process_value_msb(data.channel, data.control_value),
-            _ => None,
         }
     }
 

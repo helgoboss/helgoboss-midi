@@ -41,16 +41,17 @@ impl ParserForOneChannel {
     }
 
     fn feed(&mut self, msg: &impl MidiMessage) -> Option<Midi14BitCcMessage> {
-        let data = match msg.to_structured() {
-            StructuredMidiMessage::ControlChange(d) => d,
+        match msg.to_structured() {
+            StructuredMidiMessage::ControlChange {
+                controller_number,
+                channel,
+                control_value,
+            } => match controller_number {
+                (0..=31) => self.process_value_msb(controller_number, control_value),
+                (32..=63) => self.process_value_lsb(channel, controller_number, control_value),
+                _ => None,
+            },
             _ => return None,
-        };
-        match data.controller_number {
-            (0..=31) => self.process_value_msb(data.controller_number, data.control_value),
-            (32..=63) => {
-                self.process_value_lsb(data.channel, data.controller_number, data.control_value)
-            }
-            _ => None,
         }
     }
 

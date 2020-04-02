@@ -1,6 +1,6 @@
 use crate::{
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
-    ControlChangeData, FourteenBitValue, MidiMessage, MidiMessageFactory, Nibble, SevenBitValue,
+    FourteenBitValue, MidiMessage, MidiMessageFactory, Nibble, SevenBitValue,
     StructuredMidiMessage, FOURTEEN_BIT_VALUE_MAX, NIBBLE_MAX, SEVEN_BIT_VALUE_MAX,
 };
 
@@ -145,15 +145,15 @@ impl MidiParameterNumberMessage {
 
 pub fn msg_could_be_part_of_parameter_number_msg(msg: &impl MidiMessage) -> bool {
     match msg.to_structured() {
-        StructuredMidiMessage::ControlChange(data) => {
-            data_could_be_part_of_parameter_number_msg(&data)
-        }
+        StructuredMidiMessage::ControlChange {
+            controller_number, ..
+        } => ctrl_number_could_be_part_of_parameter_number_msg(controller_number),
         _ => false,
     }
 }
 
-pub fn data_could_be_part_of_parameter_number_msg(data: &ControlChangeData) -> bool {
-    matches!(data.controller_number, 98 | 99 | 100 | 101 | 38 | 6)
+pub fn ctrl_number_could_be_part_of_parameter_number_msg(controller_number: SevenBitValue) -> bool {
+    matches!(controller_number, 98 | 99 | 100 | 101 | 38 | 6)
 }
 
 #[cfg(test)]

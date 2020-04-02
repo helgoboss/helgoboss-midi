@@ -15,7 +15,7 @@ use strum_macros::EnumIter;
 /// architecture is that we can have a unified API, no matter which underlying data structure is
 /// used.
 ///
-/// Please also recommend the trait `MidiMessageFactory` for your struct if creating new MIDI
+/// Please also implement the trait `MidiMessageFactory` for your struct if creating new MIDI
 /// messages programmatically should be supported.
 pub trait MidiMessage {
     fn get_status_byte(&self) -> Byte;
@@ -39,43 +39,41 @@ pub trait MidiMessage {
     fn to_structured(&self) -> StructuredMidiMessage {
         use MidiMessageKind::*;
         match self.get_kind() {
-            NoteOff => StructuredMidiMessage::NoteOff(NoteData {
+            NoteOff => StructuredMidiMessage::NoteOff {
                 channel: extract_low_nibble_from_byte(self.get_status_byte()),
                 key_number: self.get_data_byte_1(),
                 velocity: self.get_data_byte_2(),
-            }),
-            NoteOn => StructuredMidiMessage::NoteOn(NoteData {
+            },
+            NoteOn => StructuredMidiMessage::NoteOn {
                 channel: extract_low_nibble_from_byte(self.get_status_byte()),
                 key_number: self.get_data_byte_1(),
                 velocity: self.get_data_byte_2(),
-            }),
-            PolyphonicKeyPressure => {
-                StructuredMidiMessage::PolyphonicKeyPressure(PolyphonicKeyPressureData {
-                    channel: extract_low_nibble_from_byte(self.get_status_byte()),
-                    key_number: self.get_data_byte_1(),
-                    pressure_amount: self.get_data_byte_2(),
-                })
-            }
-            ControlChange => StructuredMidiMessage::ControlChange(ControlChangeData {
+            },
+            PolyphonicKeyPressure => StructuredMidiMessage::PolyphonicKeyPressure {
+                channel: extract_low_nibble_from_byte(self.get_status_byte()),
+                key_number: self.get_data_byte_1(),
+                pressure_amount: self.get_data_byte_2(),
+            },
+            ControlChange => StructuredMidiMessage::ControlChange {
                 channel: extract_low_nibble_from_byte(self.get_status_byte()),
                 controller_number: self.get_data_byte_1(),
                 control_value: self.get_data_byte_2(),
-            }),
-            ProgramChange => StructuredMidiMessage::ProgramChange(ProgramChangeData {
+            },
+            ProgramChange => StructuredMidiMessage::ProgramChange {
                 channel: extract_low_nibble_from_byte(self.get_status_byte()),
                 program_number: self.get_data_byte_1(),
-            }),
-            ChannelPressure => StructuredMidiMessage::ChannelPressure(ChannelPressureData {
+            },
+            ChannelPressure => StructuredMidiMessage::ChannelPressure {
                 channel: extract_low_nibble_from_byte(self.get_status_byte()),
                 pressure_amount: self.get_data_byte_1(),
-            }),
-            PitchBendChange => StructuredMidiMessage::PitchBendChange(PitchBendChangeData {
+            },
+            PitchBendChange => StructuredMidiMessage::PitchBendChange {
                 channel: extract_low_nibble_from_byte(self.get_status_byte()),
                 pitch_bend_value: build_14_bit_value_from_two_7_bit_values(
                     self.get_data_byte_2(),
                     self.get_data_byte_1(),
                 ),
-            }),
+            },
             SystemExclusiveStart => StructuredMidiMessage::SystemExclusiveStart,
             MidiTimeCodeQuarterFrame => StructuredMidiMessage::MidiTimeCodeQuarterFrame,
             SongPositionPointer => StructuredMidiMessage::SongPositionPointer,
@@ -94,7 +92,7 @@ pub trait MidiMessage {
     // Returns false if the message kind is NoteOn but the velocity is 0
     fn is_note_on(&self) -> bool {
         match self.to_structured() {
-            StructuredMidiMessage::NoteOn(data) if data.velocity > 0 => true,
+            StructuredMidiMessage::NoteOn { velocity, .. } => velocity > 0,
             _ => false,
         }
     }
@@ -103,8 +101,8 @@ pub trait MidiMessage {
     fn is_note_off(&self) -> bool {
         use StructuredMidiMessage::*;
         match self.to_structured() {
-            NoteOff(_) => true,
-            NoteOn(data) if data.velocity == 0 => true,
+            NoteOff { .. } => true,
+            NoteOn { velocity, .. } => velocity == 0,
             _ => false,
         }
     }
@@ -401,16 +399,48 @@ pub enum MidiMessageMainCategory {
     System,
 }
 
+/// MIDI message implemented as an enum where each variant contains exactly the data which is
+/// relevant for the particular MIDI message kind. This enum is primarily intended for read-only
+/// usage via pattern matching. For that reason each variant is a struct-like enum, which is ideal
+/// for pattern matching while it is less ideal for reuse (the data contained in the variant can't
+/// be passed around in one piece).
+/// TODO Because each enum variant is not only read-only public but also constructable public,
+///  right now invalid MIDI messages can be created! Avoid that by introducing newtypes.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StructuredMidiMessage {
     // Channel messages
-    NoteOff(NoteData),
-    NoteOn(NoteData),
-    PolyphonicKeyPressure(PolyphonicKeyPressureData),
-    ControlChange(ControlChangeData),
-    ProgramChange(ProgramChangeData),
-    ChannelPressure(ChannelPressureData),
-    PitchBendChange(PitchBendChangeData),
+    NoteOff {
+        channel: Nibble,
+        key_number: SevenBitValue,
+        velocity: SevenBitValue,
+    },
+    NoteOn {
+        channel: Nibble,
+        key_number: SevenBitValue,
+        velocity: SevenBitValue,
+    },
+    PolyphonicKeyPressure {
+        channel: Nibble,
+        key_number: SevenBitValue,
+        pressure_amount: SevenBitValue,
+    },
+    ControlChange {
+        channel: Nibble,
+        controller_number: SevenBitValue,
+        control_value: SevenBitValue,
+    },
+    ProgramChange {
+        channel: Nibble,
+        program_number: SevenBitValue,
+    },
+    ChannelPressure {
+        channel: Nibble,
+        pressure_amount: SevenBitValue,
+    },
+    PitchBendChange {
+        channel: Nibble,
+        pitch_bend_value: FourteenBitValue,
+    },
     // System exclusive messages
     SystemExclusiveStart,
     // System common messages
@@ -428,45 +458,6 @@ pub enum StructuredMidiMessage {
     SystemReset,
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct NoteData {
-    pub channel: Nibble,
-    pub key_number: SevenBitValue,
-    pub velocity: SevenBitValue,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ControlChangeData {
-    pub channel: Nibble,
-    pub controller_number: SevenBitValue,
-    pub control_value: SevenBitValue,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ProgramChangeData {
-    pub channel: Nibble,
-    pub program_number: SevenBitValue,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PolyphonicKeyPressureData {
-    pub channel: Nibble,
-    pub key_number: SevenBitValue,
-    pub pressure_amount: SevenBitValue,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct ChannelPressureData {
-    pub channel: Nibble,
-    pub pressure_amount: SevenBitValue,
-}
-
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct PitchBendChangeData {
-    pub channel: Nibble,
-    pub pitch_bend_value: FourteenBitValue,
-}
-
 impl MidiMessageFactory for StructuredMidiMessage {
     unsafe fn from_bytes_raw(status_byte: u8, data_byte_1: u8, data_byte_2: u8) -> Self {
         RawMidiMessage::from_bytes_raw(status_byte, data_byte_1, data_byte_2).to_structured()
@@ -482,22 +473,26 @@ impl MidiMessage for StructuredMidiMessage {
     fn get_status_byte(&self) -> u8 {
         use StructuredMidiMessage::*;
         match self {
-            NoteOff(data) => with_low_nibble_added(MidiMessageKind::NoteOff.into(), data.channel),
-            NoteOn(data) => with_low_nibble_added(MidiMessageKind::NoteOn.into(), data.channel),
-            PolyphonicKeyPressure(data) => {
-                with_low_nibble_added(MidiMessageKind::PolyphonicKeyPressure.into(), data.channel)
+            NoteOff { channel, .. } => {
+                with_low_nibble_added(MidiMessageKind::NoteOff.into(), *channel)
             }
-            ControlChange(data) => {
-                with_low_nibble_added(MidiMessageKind::ControlChange.into(), data.channel)
+            NoteOn { channel, .. } => {
+                with_low_nibble_added(MidiMessageKind::NoteOn.into(), *channel)
             }
-            ProgramChange(data) => {
-                with_low_nibble_added(MidiMessageKind::ProgramChange.into(), data.channel)
+            PolyphonicKeyPressure { channel, .. } => {
+                with_low_nibble_added(MidiMessageKind::PolyphonicKeyPressure.into(), *channel)
             }
-            ChannelPressure(data) => {
-                with_low_nibble_added(MidiMessageKind::ChannelPressure.into(), data.channel)
+            ControlChange { channel, .. } => {
+                with_low_nibble_added(MidiMessageKind::ControlChange.into(), *channel)
             }
-            PitchBendChange(data) => {
-                with_low_nibble_added(MidiMessageKind::PitchBendChange.into(), data.channel)
+            ProgramChange { channel, .. } => {
+                with_low_nibble_added(MidiMessageKind::ProgramChange.into(), *channel)
+            }
+            ChannelPressure { channel, .. } => {
+                with_low_nibble_added(MidiMessageKind::ChannelPressure.into(), *channel)
+            }
+            PitchBendChange { channel, .. } => {
+                with_low_nibble_added(MidiMessageKind::PitchBendChange.into(), *channel)
             }
             SystemExclusiveStart => MidiMessageKind::SystemExclusiveStart.into(),
             MidiTimeCodeQuarterFrame => MidiMessageKind::MidiTimeCodeQuarterFrame.into(),
@@ -517,15 +512,19 @@ impl MidiMessage for StructuredMidiMessage {
     fn get_data_byte_1(&self) -> u8 {
         use StructuredMidiMessage::*;
         match self {
-            NoteOff(data) => data.key_number,
-            NoteOn(data) => data.key_number,
-            PolyphonicKeyPressure(data) => data.key_number,
-            ControlChange(data) => data.controller_number,
-            ProgramChange(data) => data.program_number,
-            ChannelPressure(data) => data.pressure_amount,
-            PitchBendChange(data) => {
-                extract_low_7_bit_value_from_14_bit_value(data.pitch_bend_value)
-            }
+            NoteOff { key_number, .. } => *key_number,
+            NoteOn { key_number, .. } => *key_number,
+            PolyphonicKeyPressure { key_number, .. } => *key_number,
+            ControlChange {
+                controller_number, ..
+            } => *controller_number,
+            ProgramChange { program_number, .. } => *program_number,
+            ChannelPressure {
+                pressure_amount, ..
+            } => *pressure_amount,
+            PitchBendChange {
+                pitch_bend_value, ..
+            } => extract_low_7_bit_value_from_14_bit_value(*pitch_bend_value),
             _ => 0,
         }
     }
@@ -533,15 +532,17 @@ impl MidiMessage for StructuredMidiMessage {
     fn get_data_byte_2(&self) -> u8 {
         use StructuredMidiMessage::*;
         match self {
-            NoteOff(data) => data.velocity,
-            NoteOn(data) => data.velocity,
-            PolyphonicKeyPressure(data) => data.pressure_amount,
-            ControlChange(data) => data.control_value,
-            ProgramChange(_data) => 0,
-            ChannelPressure(_data) => 0,
-            PitchBendChange(data) => {
-                extract_high_7_bit_value_from_14_bit_value(data.pitch_bend_value)
-            }
+            NoteOff { velocity, .. } => *velocity,
+            NoteOn { velocity, .. } => *velocity,
+            PolyphonicKeyPressure {
+                pressure_amount, ..
+            } => *pressure_amount,
+            ControlChange { control_value, .. } => *control_value,
+            ProgramChange { .. } => 0,
+            ChannelPressure { .. } => 0,
+            PitchBendChange {
+                pitch_bend_value, ..
+            } => extract_high_7_bit_value_from_14_bit_value(*pitch_bend_value),
             _ => 0,
         }
     }
@@ -624,11 +625,11 @@ mod tests {
         assert_eq!(msg.get_program_number(), None);
         assert_eq!(
             msg.to_structured(),
-            StructuredMidiMessage::NoteOn(NoteData {
+            StructuredMidiMessage::NoteOn {
                 channel: 1,
                 key_number: 64,
                 velocity: 100
-            })
+            }
         );
         assert!(msg.is_note());
         assert!(msg.is_note_on());
@@ -666,11 +667,11 @@ mod tests {
         assert_eq!(msg.get_program_number(), None);
         assert_eq!(
             msg.to_structured(),
-            StructuredMidiMessage::NoteOn(NoteData {
+            StructuredMidiMessage::NoteOn {
                 channel: 1,
                 key_number: 64,
                 velocity: 100
-            })
+            }
         );
         assert!(msg.is_note());
         assert!(msg.is_note_on());
@@ -699,11 +700,11 @@ mod tests {
         assert_eq!(msg.get_program_number(), None);
         assert_eq!(
             msg.to_structured(),
-            StructuredMidiMessage::NoteOff(NoteData {
+            StructuredMidiMessage::NoteOff {
                 channel: 2,
                 key_number: 125,
                 velocity: 70
-            })
+            }
         );
         assert!(msg.is_note());
         assert!(!msg.is_note_on());
@@ -732,11 +733,11 @@ mod tests {
         assert_eq!(msg.get_program_number(), None);
         assert_eq!(
             msg.to_structured(),
-            StructuredMidiMessage::NoteOn(NoteData {
+            StructuredMidiMessage::NoteOn {
                 channel: 0,
                 key_number: 5,
                 velocity: 0
-            })
+            }
         );
         assert!(msg.is_note());
         assert!(!msg.is_note_on());
@@ -765,11 +766,11 @@ mod tests {
         assert_eq!(msg.get_program_number(), None);
         assert_eq!(
             msg.to_structured(),
-            StructuredMidiMessage::ControlChange(ControlChangeData {
+            StructuredMidiMessage::ControlChange {
                 channel: 1,
                 controller_number: 50,
                 control_value: 2
-            })
+            }
         );
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -798,10 +799,10 @@ mod tests {
         assert_eq!(msg.get_program_number(), Some(22));
         assert_eq!(
             msg.to_structured(),
-            StructuredMidiMessage::ProgramChange(ProgramChangeData {
+            StructuredMidiMessage::ProgramChange {
                 channel: 4,
                 program_number: 22
-            })
+            }
         );
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -830,11 +831,11 @@ mod tests {
         assert_eq!(msg.get_program_number(), None);
         assert_eq!(
             msg.to_structured(),
-            StructuredMidiMessage::PolyphonicKeyPressure(PolyphonicKeyPressureData {
+            StructuredMidiMessage::PolyphonicKeyPressure {
                 channel: 15,
                 key_number: 127,
                 pressure_amount: 50
-            })
+            }
         );
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -863,10 +864,10 @@ mod tests {
         assert_eq!(msg.get_program_number(), None);
         assert_eq!(
             msg.to_structured(),
-            StructuredMidiMessage::ChannelPressure(ChannelPressureData {
+            StructuredMidiMessage::ChannelPressure {
                 channel: 14,
                 pressure_amount: 0
-            })
+            }
         );
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -895,10 +896,10 @@ mod tests {
         assert_eq!(msg.get_program_number(), None);
         assert_eq!(
             msg.to_structured(),
-            StructuredMidiMessage::PitchBendChange(PitchBendChangeData {
+            StructuredMidiMessage::PitchBendChange {
                 channel: 1,
                 pitch_bend_value: 1278
-            })
+            }
         );
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -1067,11 +1068,11 @@ mod tests {
         let msg = StructuredMidiMessage::from_bytes(145, 64, 100).unwrap();
         // When
         // Then
-        let expected_msg = StructuredMidiMessage::NoteOn(NoteData {
+        let expected_msg = StructuredMidiMessage::NoteOn {
             channel: 1,
             key_number: 64,
             velocity: 100,
-        });
+        };
         assert_eq!(msg, expected_msg);
         assert_eq!(msg.get_status_byte(), 145);
         assert_eq!(msg.get_data_byte_1(), 64);
