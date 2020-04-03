@@ -294,8 +294,7 @@ pub trait MidiMessageFactory: Sized {
     fn start() -> Self {
         Self::system_real_time_message(MidiMessageKind::Start)
     }
-    // TODO Might give this a shorter name
-    fn continue_message() -> Self {
+    fn r#continue() -> Self {
         Self::system_real_time_message(MidiMessageKind::Continue)
     }
     fn stop() -> Self {
@@ -964,9 +963,9 @@ mod tests {
     }
 
     #[test]
-    fn continue_message() {
+    fn r#continue() {
         // Given
-        let msg = RawMidiMessage::continue_message();
+        let msg = RawMidiMessage::r#continue();
         // When
         // Then
         assert_eq!(msg.get_status_byte(), 0xfb);

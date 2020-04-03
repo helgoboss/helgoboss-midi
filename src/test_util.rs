@@ -41,8 +41,8 @@ pub fn start() -> Msg {
     Msg::start()
 }
 
-pub fn continue_message() -> Msg {
-    Msg::continue_message()
+pub fn r#continue() -> Msg {
+    Msg::r#continue()
 }
 
 pub fn stop() -> Msg {
