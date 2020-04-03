@@ -13,9 +13,6 @@ pub use midi_parameter_number_message::*;
 mod midi_parameter_number_message_parser;
 pub use midi_parameter_number_message_parser::*;
 
-mod types;
-pub use types::*;
-
 mod channel;
 pub use channel::*;
 
@@ -24,6 +21,9 @@ pub use key_number::*;
 
 mod controller_number;
 pub use controller_number::*;
+
+mod program_number;
+pub use program_number::*;
 
 mod u7;
 pub use u7::*;

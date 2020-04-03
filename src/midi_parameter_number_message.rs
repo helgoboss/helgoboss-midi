@@ -1,7 +1,6 @@
 use crate::{
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
-    MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage, SEVEN_BIT_VALUE_MAX,
-    U14,
+    ControllerNumber, MidiMessage, MidiMessageFactory, StructuredMidiMessage, U14, U7,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -17,7 +16,7 @@ impl MidiParameterNumberMessage {
     pub fn non_registered_7_bit(
         channel: Channel,
         number: U14,
-        value: SevenBitValue,
+        value: U7,
     ) -> MidiParameterNumberMessage {
         Self::seven_bit(channel, number, value, false)
     }
@@ -33,7 +32,7 @@ impl MidiParameterNumberMessage {
     pub fn registered_7_bit(
         channel: Channel,
         number: U14,
-        value: SevenBitValue,
+        value: U7,
     ) -> MidiParameterNumberMessage {
         Self::seven_bit(channel, number, value, true)
     }
@@ -49,14 +48,13 @@ impl MidiParameterNumberMessage {
     fn seven_bit(
         channel: Channel,
         number: U14,
-        value: SevenBitValue,
+        value: U7,
         is_registered: bool,
     ) -> MidiParameterNumberMessage {
-        debug_assert!(value <= SEVEN_BIT_VALUE_MAX);
         MidiParameterNumberMessage {
             channel,
             number,
-            value: U14(value as u16),
+            value: value.into(),
             is_registered,
             is_14_bit: false,
         }
@@ -104,14 +102,22 @@ impl MidiParameterNumberMessage {
         // Number MSB
         messages[i] = Some(T::control_change(
             self.channel,
-            if self.is_registered { 101 } else { 99 },
+            if self.is_registered {
+                ControllerNumber::REGISTERED_PARAMETER_NUMBER_MSB
+            } else {
+                ControllerNumber::NON_REGISTERED_PARAMETER_NUMBER_MSB
+            },
             extract_high_7_bit_value_from_14_bit_value(self.number),
         ));
         i += 1;
         // Number LSB
         messages[i] = Some(T::control_change(
             self.channel,
-            if self.is_registered { 100 } else { 98 },
+            if self.is_registered {
+                ControllerNumber::REGISTERED_PARAMETER_NUMBER_LSB
+            } else {
+                ControllerNumber::NON_REGISTERED_PARAMETER_NUMBER_LSB
+            },
             extract_low_7_bit_value_from_14_bit_value(self.number),
         ));
         i += 1;
@@ -119,7 +125,7 @@ impl MidiParameterNumberMessage {
         if self.is_14_bit {
             messages[i] = Some(T::control_change(
                 self.channel,
-                38,
+                ControllerNumber::DATA_ENTRY_MSB_LSB,
                 extract_low_7_bit_value_from_14_bit_value(self.value),
             ));
             i += 1;
@@ -127,34 +133,21 @@ impl MidiParameterNumberMessage {
         // Value MSB
         messages[i] = Some(T::control_change(
             self.channel,
-            6,
+            ControllerNumber::DATA_ENTRY_MSB,
             if self.is_14_bit {
                 extract_high_7_bit_value_from_14_bit_value(self.value)
             } else {
-                u16::from(self.value) as SevenBitValue
+                U7(u16::from(self.value) as u8)
             },
         ));
         messages
     }
 }
 
-pub fn msg_could_be_part_of_parameter_number_msg(msg: &impl MidiMessage) -> bool {
-    match msg.to_structured() {
-        StructuredMidiMessage::ControlChange {
-            controller_number, ..
-        } => ctrl_number_could_be_part_of_parameter_number_msg(controller_number),
-        _ => false,
-    }
-}
-
-pub fn ctrl_number_could_be_part_of_parameter_number_msg(controller_number: SevenBitValue) -> bool {
-    matches!(controller_number, 98 | 99 | 100 | 101 | 38 | 6)
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{channel as ch, u14, RawMidiMessage};
+    use crate::{channel as ch, controller_number as cn, u14, u7, RawMidiMessage};
 
     #[test]
     fn fourteen_bit_parameter_number_messages() {
@@ -171,10 +164,10 @@ mod tests {
         assert_eq!(
             midi_msgs,
             [
-                Some(RawMidiMessage::control_change(ch(0), 101, 3)),
-                Some(RawMidiMessage::control_change(ch(0), 100, 36)),
-                Some(RawMidiMessage::control_change(ch(0), 38, 24)),
-                Some(RawMidiMessage::control_change(ch(0), 6, 117)),
+                Some(RawMidiMessage::control_change(ch(0), cn(101), u7(3))),
+                Some(RawMidiMessage::control_change(ch(0), cn(100), u7(36))),
+                Some(RawMidiMessage::control_change(ch(0), cn(38), u7(24))),
+                Some(RawMidiMessage::control_change(ch(0), cn(6), u7(117))),
             ]
         );
     }
@@ -182,13 +175,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn seven_bit_parameter_number_messages_panic() {
-        MidiParameterNumberMessage::non_registered_7_bit(ch(0), u14(420), 255);
+        MidiParameterNumberMessage::non_registered_7_bit(ch(0), u14(420), u7(255));
     }
 
     #[test]
     fn seven_bit_parameter_number_messages() {
         // Given
-        let msg = MidiParameterNumberMessage::non_registered_7_bit(ch(2), u14(421), 126);
+        let msg = MidiParameterNumberMessage::non_registered_7_bit(ch(2), u14(421), u7(126));
         // When
         // Then
         assert_eq!(msg.get_channel(), ch(2));
@@ -200,48 +193,11 @@ mod tests {
         assert_eq!(
             midi_msgs,
             [
-                Some(RawMidiMessage::control_change(ch(2), 99, 3)),
-                Some(RawMidiMessage::control_change(ch(2), 98, 37)),
-                Some(RawMidiMessage::control_change(ch(2), 6, 126)),
+                Some(RawMidiMessage::control_change(ch(2), cn(99), u7(3))),
+                Some(RawMidiMessage::control_change(ch(2), cn(98), u7(37))),
+                Some(RawMidiMessage::control_change(ch(2), cn(6), u7(126))),
                 None,
             ]
         );
-    }
-
-    #[test]
-    fn could_be_part_of_14_bit_cc_message_test() {
-        // Given
-        // When
-        // Then
-        assert!(msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(2), 99, 3)
-        ));
-        assert!(msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(2), 98, 37)
-        ));
-        assert!(msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(2), 6, 126)
-        ));
-        assert!(msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(0), 101, 3)
-        ));
-        assert!(msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(0), 100, 36)
-        ));
-        assert!(msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(0), 38, 24)
-        ));
-        assert!(msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(0), 6, 117)
-        ));
-        assert!(!msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(0), 5, 117)
-        ));
-        assert!(!msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(0), 39, 117)
-        ));
-        assert!(!msg_could_be_part_of_parameter_number_msg(
-            &RawMidiMessage::control_change(ch(0), 77, 2)
-        ));
     }
 }
