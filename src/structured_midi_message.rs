@@ -64,6 +64,10 @@ pub enum StructuredMidiMessage {
     Stop,
     ActiveSensing,
     SystemReset,
+    SystemCommonUndefined1,
+    SystemCommonUndefined2,
+    SystemRealTimeUndefined1,
+    SystemRealTimeUndefined2,
 }
 
 impl MidiMessageFactory for StructuredMidiMessage {
@@ -110,6 +114,10 @@ impl MidiMessage for StructuredMidiMessage {
             Stop => MidiMessageKind::Stop.into(),
             ActiveSensing => MidiMessageKind::ActiveSensing.into(),
             SystemReset => MidiMessageKind::SystemReset.into(),
+            SystemCommonUndefined1 => MidiMessageKind::SystemCommonUndefined1.into(),
+            SystemCommonUndefined2 => MidiMessageKind::SystemCommonUndefined2.into(),
+            SystemRealTimeUndefined1 => MidiMessageKind::SystemRealTimeUndefined1.into(),
+            SystemRealTimeUndefined2 => MidiMessageKind::SystemRealTimeUndefined2.into(),
         }
     }
 
@@ -143,6 +151,10 @@ impl MidiMessage for StructuredMidiMessage {
             Stop => U7::MIN,
             ActiveSensing => U7::MIN,
             SystemReset => U7::MIN,
+            SystemCommonUndefined1 => U7::MIN,
+            SystemCommonUndefined2 => U7::MIN,
+            SystemRealTimeUndefined1 => U7::MIN,
+            SystemRealTimeUndefined2 => U7::MIN,
         }
     }
 
@@ -174,6 +186,10 @@ impl MidiMessage for StructuredMidiMessage {
             Stop => U7::MIN,
             ActiveSensing => U7::MIN,
             SystemReset => U7::MIN,
+            SystemCommonUndefined1 => U7::MIN,
+            SystemCommonUndefined2 => U7::MIN,
+            SystemRealTimeUndefined1 => U7::MIN,
+            SystemRealTimeUndefined2 => U7::MIN,
         }
     }
 

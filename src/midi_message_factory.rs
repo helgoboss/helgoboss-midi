@@ -18,7 +18,7 @@ pub trait MidiMessageFactory: Sized {
     // acts a bit like a parse function where client code should be able to recover from wrong
     // input.
     fn from_bytes(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Result<Self, &'static str> {
-        get_midi_message_kind_from_status_byte(status_byte).map_err(|_| "Unknown status byte")?;
+        get_midi_message_kind_from_status_byte(status_byte).map_err(|_| "Invalid status byte")?;
         Ok(unsafe { Self::from_bytes_unchecked(status_byte, data_byte_1, data_byte_2) })
     }
 

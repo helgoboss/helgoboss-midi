@@ -94,6 +94,10 @@ pub trait MidiMessage {
             Stop => StructuredMidiMessage::Stop,
             ActiveSensing => StructuredMidiMessage::ActiveSensing,
             SystemReset => StructuredMidiMessage::SystemReset,
+            SystemCommonUndefined1 => StructuredMidiMessage::SystemCommonUndefined1,
+            SystemCommonUndefined2 => StructuredMidiMessage::SystemCommonUndefined2,
+            SystemRealTimeUndefined1 => StructuredMidiMessage::SystemRealTimeUndefined1,
+            SystemRealTimeUndefined2 => StructuredMidiMessage::SystemRealTimeUndefined2,
         }
     }
 
@@ -189,32 +193,36 @@ pub trait MidiMessage {
 // The most low-level kind of a MIDI message
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive, EnumIter)]
 #[repr(u8)]
-// TODO We need a way to represent undefined MIDI messages (unknown kind)
+// TODO Page 35 of MIDI spec PDF contains good classification
 pub enum MidiMessageKind {
     // Channel messages = channel voice messages + channel mode messages (given value represents
     // channel 0 status byte)
     NoteOff = 0x80,
     NoteOn = 0x90,
-    PolyphonicKeyPressure = 0xa0,
-    ControlChange = 0xb0,
-    ProgramChange = 0xc0,
-    ChannelPressure = 0xd0,
-    PitchBendChange = 0xe0,
+    PolyphonicKeyPressure = 0xA0,
+    ControlChange = 0xB0,
+    ProgramChange = 0xC0,
+    ChannelPressure = 0xD0,
+    PitchBendChange = 0xE0,
     // System exclusive messages
-    SystemExclusiveStart = 0xf0,
+    SystemExclusiveStart = 0xF0,
     // System common messages
-    MidiTimeCodeQuarterFrame = 0xf1,
-    SongPositionPointer = 0xf2,
-    SongSelect = 0xf3,
-    TuneRequest = 0xf6,
-    SystemExclusiveEnd = 0xf7,
+    MidiTimeCodeQuarterFrame = 0xF1,
+    SongPositionPointer = 0xF2,
+    SongSelect = 0xF3,
+    SystemCommonUndefined1 = 0xF4,
+    SystemCommonUndefined2 = 0xF5,
+    TuneRequest = 0xF6,
+    SystemExclusiveEnd = 0xF7,
     // System real-time messages (given value represents the complete status byte)
-    TimingClock = 0xf8,
-    Start = 0xfa,
-    Continue = 0xfb,
-    Stop = 0xfc,
-    ActiveSensing = 0xfe,
-    SystemReset = 0xff,
+    TimingClock = 0xF8,
+    SystemRealTimeUndefined1 = 0xF9,
+    Start = 0xFA,
+    Continue = 0xFB,
+    Stop = 0xFC,
+    SystemRealTimeUndefined2 = 0xFD,
+    ActiveSensing = 0xFE,
+    SystemReset = 0xFF,
 }
 
 impl MidiMessageKind {
@@ -228,12 +236,19 @@ impl MidiMessageKind {
             | PitchBendChange
             | ProgramChange
             | ControlChange => MidiMessageSuperKind::Channel,
-            TimingClock | Start | Continue | Stop | ActiveSensing | SystemReset => {
-                MidiMessageSuperKind::SystemRealTime
-            }
+            TimingClock
+            | SystemRealTimeUndefined1
+            | Start
+            | Continue
+            | Stop
+            | SystemRealTimeUndefined2
+            | ActiveSensing
+            | SystemReset => MidiMessageSuperKind::SystemRealTime,
             MidiTimeCodeQuarterFrame
             | SongPositionPointer
             | SongSelect
+            | SystemCommonUndefined1
+            | SystemCommonUndefined2
             | TuneRequest
             | SystemExclusiveEnd => MidiMessageSuperKind::SystemCommon,
             SystemExclusiveStart => MidiMessageSuperKind::SystemExclusive,
