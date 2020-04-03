@@ -35,8 +35,6 @@ pub trait MidiMessage {
         self.get_super_kind().get_main_category()
     }
 
-    // TODO Maybe return a Cow. If the implementation uses a StructuredMidiMessage internally, we
-    //  can return a reference here and avoid any copying!
     fn to_structured(&self) -> StructuredMidiMessage {
         use MidiMessageKind::*;
         match self.get_kind() {
@@ -296,6 +294,7 @@ pub trait MidiMessageFactory: Sized {
     fn start() -> Self {
         Self::system_real_time_message(MidiMessageKind::Start)
     }
+    // TODO Might give this a shorter name
     fn continue_message() -> Self {
         Self::system_real_time_message(MidiMessageKind::Continue)
     }

@@ -150,7 +150,7 @@ mod tests {
     use crate::{channel as ch, controller_number as cn, u14, u7, RawMidiMessage};
 
     #[test]
-    fn fourteen_bit_parameter_number_messages() {
+    fn parameter_number_messages_14_bit() {
         // Given
         let msg = MidiParameterNumberMessage::registered_14_bit(ch(0), u14(420), u14(15000));
         // When
@@ -174,12 +174,12 @@ mod tests {
 
     #[test]
     #[should_panic]
-    fn seven_bit_parameter_number_messages_panic() {
+    fn parameter_number_messages_7_bit_panic() {
         MidiParameterNumberMessage::non_registered_7_bit(ch(0), u14(420), u7(255));
     }
 
     #[test]
-    fn seven_bit_parameter_number_messages() {
+    fn parameter_number_messages_7_bit() {
         // Given
         let msg = MidiParameterNumberMessage::non_registered_7_bit(ch(2), u14(421), u7(126));
         // When
