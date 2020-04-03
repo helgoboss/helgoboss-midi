@@ -1,8 +1,7 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, build_byte_from_nibbles,
-    extract_high_7_bit_value_from_14_bit_value, extract_high_nibble_from_byte,
-    extract_low_7_bit_value_from_14_bit_value, extract_low_nibble_from_byte, u14,
-    with_low_nibble_added, Channel, SevenBitValue, SEVEN_BIT_VALUE_MAX, U14,
+    build_14_bit_value_from_two_7_bit_values, extract_high_7_bit_value_from_14_bit_value,
+    extract_low_7_bit_value_from_14_bit_value, u14, Channel, SevenBitValue, SEVEN_BIT_VALUE_MAX,
+    U14,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use std::convert::TryInto;
@@ -42,35 +41,35 @@ pub trait MidiMessage {
         use MidiMessageKind::*;
         match self.get_kind() {
             NoteOff => StructuredMidiMessage::NoteOff {
-                channel: extract_low_nibble_from_byte(self.get_status_byte()),
+                channel: extract_channel_from_status_byte(self.get_status_byte()),
                 key_number: self.get_data_byte_1(),
                 velocity: self.get_data_byte_2(),
             },
             NoteOn => StructuredMidiMessage::NoteOn {
-                channel: extract_low_nibble_from_byte(self.get_status_byte()),
+                channel: extract_channel_from_status_byte(self.get_status_byte()),
                 key_number: self.get_data_byte_1(),
                 velocity: self.get_data_byte_2(),
             },
             PolyphonicKeyPressure => StructuredMidiMessage::PolyphonicKeyPressure {
-                channel: extract_low_nibble_from_byte(self.get_status_byte()),
+                channel: extract_channel_from_status_byte(self.get_status_byte()),
                 key_number: self.get_data_byte_1(),
                 pressure_amount: self.get_data_byte_2(),
             },
             ControlChange => StructuredMidiMessage::ControlChange {
-                channel: extract_low_nibble_from_byte(self.get_status_byte()),
+                channel: extract_channel_from_status_byte(self.get_status_byte()),
                 controller_number: self.get_data_byte_1(),
                 control_value: self.get_data_byte_2(),
             },
             ProgramChange => StructuredMidiMessage::ProgramChange {
-                channel: extract_low_nibble_from_byte(self.get_status_byte()),
+                channel: extract_channel_from_status_byte(self.get_status_byte()),
                 program_number: self.get_data_byte_1(),
             },
             ChannelPressure => StructuredMidiMessage::ChannelPressure {
-                channel: extract_low_nibble_from_byte(self.get_status_byte()),
+                channel: extract_channel_from_status_byte(self.get_status_byte()),
                 pressure_amount: self.get_data_byte_1(),
             },
             PitchBendChange => StructuredMidiMessage::PitchBendChange {
-                channel: extract_low_nibble_from_byte(self.get_status_byte()),
+                channel: extract_channel_from_status_byte(self.get_status_byte()),
                 pitch_bend_value: build_14_bit_value_from_two_7_bit_values(
                     self.get_data_byte_2(),
                     self.get_data_byte_1(),
@@ -120,7 +119,7 @@ pub trait MidiMessage {
         if self.get_main_category() != MidiMessageMainCategory::Channel {
             return None;
         }
-        Some(extract_low_nibble_from_byte(self.get_status_byte()))
+        Some(extract_channel_from_status_byte(self.get_status_byte()))
     }
 
     fn get_key_number(&self) -> Option<SevenBitValue> {
@@ -234,7 +233,7 @@ pub trait MidiMessageFactory: Sized {
         );
         debug_assert!(data_1 <= SEVEN_BIT_VALUE_MAX);
         debug_assert!(data_2 <= SEVEN_BIT_VALUE_MAX);
-        unsafe { Self::from_bytes_raw(with_low_nibble_added(kind.into(), channel), data_1, data_2) }
+        unsafe { Self::from_bytes_raw(build_status_byte(kind.into(), channel), data_1, data_2) }
     }
 
     // TODO Create factory methods for system-common and system-exclusive messages
@@ -315,6 +314,10 @@ pub trait MidiMessageFactory: Sized {
     fn system_reset() -> Self {
         Self::system_real_time_message(MidiMessageKind::SystemReset)
     }
+}
+
+fn build_status_byte(kind_byte: u8, channel: Channel) -> u8 {
+    kind_byte | u8::from(channel)
 }
 
 // The most low-level kind of a MIDI message
@@ -474,26 +477,22 @@ impl MidiMessage for StructuredMidiMessage {
     fn get_status_byte(&self) -> u8 {
         use StructuredMidiMessage::*;
         match self {
-            NoteOff { channel, .. } => {
-                with_low_nibble_added(MidiMessageKind::NoteOff.into(), *channel)
-            }
-            NoteOn { channel, .. } => {
-                with_low_nibble_added(MidiMessageKind::NoteOn.into(), *channel)
-            }
+            NoteOff { channel, .. } => build_status_byte(MidiMessageKind::NoteOff.into(), *channel),
+            NoteOn { channel, .. } => build_status_byte(MidiMessageKind::NoteOn.into(), *channel),
             PolyphonicKeyPressure { channel, .. } => {
-                with_low_nibble_added(MidiMessageKind::PolyphonicKeyPressure.into(), *channel)
+                build_status_byte(MidiMessageKind::PolyphonicKeyPressure.into(), *channel)
             }
             ControlChange { channel, .. } => {
-                with_low_nibble_added(MidiMessageKind::ControlChange.into(), *channel)
+                build_status_byte(MidiMessageKind::ControlChange.into(), *channel)
             }
             ProgramChange { channel, .. } => {
-                with_low_nibble_added(MidiMessageKind::ProgramChange.into(), *channel)
+                build_status_byte(MidiMessageKind::ProgramChange.into(), *channel)
             }
             ChannelPressure { channel, .. } => {
-                with_low_nibble_added(MidiMessageKind::ChannelPressure.into(), *channel)
+                build_status_byte(MidiMessageKind::ChannelPressure.into(), *channel)
             }
             PitchBendChange { channel, .. } => {
-                with_low_nibble_added(MidiMessageKind::PitchBendChange.into(), *channel)
+                build_status_byte(MidiMessageKind::PitchBendChange.into(), *channel)
             }
             SystemExclusiveStart => MidiMessageKind::SystemExclusiveStart.into(),
             MidiTimeCodeQuarterFrame => MidiMessageKind::MidiTimeCodeQuarterFrame.into(),
@@ -554,6 +553,10 @@ impl MidiMessage for StructuredMidiMessage {
     }
 }
 
+fn extract_channel_from_status_byte(byte: u8) -> Channel {
+    unsafe { Channel::new_unchecked(byte & 0x0f) }
+}
+
 #[derive(Clone, Debug, PartialEq, Eq)]
 pub struct RawMidiMessage {
     status_byte: u8,
@@ -589,14 +592,24 @@ fn get_midi_message_kind_from_status_byte(
     status_byte: u8,
 ) -> Result<MidiMessageKind, TryFromPrimitiveError<MidiMessageKind>> {
     let high_status_byte_nibble = extract_high_nibble_from_byte(status_byte);
-    if high_status_byte_nibble == Channel::MAX {
+    if high_status_byte_nibble == 0xf {
         // System message. The complete status byte makes up the kind.
         status_byte.try_into()
     } else {
         // Channel message. Just the high nibble of the status byte makes up the kind
         // (low nibble encodes channel).
-        build_byte_from_nibbles(high_status_byte_nibble, Channel::MIN).try_into()
+        build_byte_from_nibbles(high_status_byte_nibble, 0).try_into()
     }
+}
+
+fn extract_high_nibble_from_byte(byte: u8) -> u8 {
+    (byte >> 4) & 0x0f
+}
+
+fn build_byte_from_nibbles(high_nibble: u8, low_nibble: u8) -> u8 {
+    debug_assert!(high_nibble <= 0xf);
+    debug_assert!(low_nibble <= 0xf);
+    (high_nibble << 4) | low_nibble
 }
 
 #[cfg(test)]
