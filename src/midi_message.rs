@@ -182,6 +182,7 @@ pub trait MidiMessage {
 /// methods. The advantage of this architecture is that we can have a unified factory API, no matter
 /// which underlying data structure is used.
 pub trait MidiMessageFactory: Sized {
+    // TODO Call unchecked instead of raw
     unsafe fn from_bytes_raw(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Self;
 
     // Although we could argue that calling this function with illegal input values is a violation
@@ -206,7 +207,7 @@ pub trait MidiMessageFactory: Sized {
     }
 
     fn channel_message(kind: MidiMessageKind, channel: Channel, data_1: U7, data_2: U7) -> Self {
-        debug_assert_eq!(
+        assert_eq!(
             kind.get_super_kind().get_main_category(),
             MidiMessageMainCategory::Channel
         );
@@ -215,26 +216,28 @@ pub trait MidiMessageFactory: Sized {
 
     // TODO Create factory methods for system-common and system-exclusive messages
     fn system_real_time_message(kind: MidiMessageKind) -> Self {
-        debug_assert_eq!(kind.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
+        assert_eq!(kind.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
         unsafe { Self::from_bytes_raw(kind.into(), U7::MIN, U7::MIN) }
     }
 
     fn note_on(channel: Channel, key_number: KeyNumber, velocity: U7) -> Self {
-        Self::channel_message(
-            MidiMessageKind::NoteOn,
-            channel,
-            key_number.into(),
-            velocity,
-        )
+        unsafe {
+            Self::from_bytes_raw(
+                build_status_byte(MidiMessageKind::NoteOn.into(), channel),
+                key_number.into(),
+                velocity,
+            )
+        }
     }
 
     fn note_off(channel: Channel, key_number: KeyNumber, velocity: U7) -> Self {
-        Self::channel_message(
-            MidiMessageKind::NoteOff,
-            channel,
-            key_number.into(),
-            velocity,
-        )
+        unsafe {
+            Self::from_bytes_raw(
+                build_status_byte(MidiMessageKind::NoteOff.into(), channel),
+                key_number.into(),
+                velocity,
+            )
+        }
     }
 
     fn control_change(
@@ -242,21 +245,23 @@ pub trait MidiMessageFactory: Sized {
         controller_number: ControllerNumber,
         control_value: U7,
     ) -> Self {
-        Self::channel_message(
-            MidiMessageKind::ControlChange,
-            channel,
-            controller_number.into(),
-            control_value,
-        )
+        unsafe {
+            Self::from_bytes_raw(
+                build_status_byte(MidiMessageKind::ControlChange.into(), channel),
+                controller_number.into(),
+                control_value,
+            )
+        }
     }
 
     fn program_change(channel: Channel, program_number: ProgramNumber) -> Self {
-        Self::channel_message(
-            MidiMessageKind::ProgramChange,
-            channel,
-            program_number.into(),
-            U7::MIN,
-        )
+        unsafe {
+            Self::from_bytes_raw(
+                build_status_byte(MidiMessageKind::ProgramChange.into(), channel),
+                program_number.into(),
+                U7::MIN,
+            )
+        }
     }
 
     fn polyphonic_key_pressure(
@@ -264,47 +269,50 @@ pub trait MidiMessageFactory: Sized {
         key_number: KeyNumber,
         pressure_amount: U7,
     ) -> Self {
-        Self::channel_message(
-            MidiMessageKind::PolyphonicKeyPressure,
-            channel,
-            key_number.into(),
-            pressure_amount,
-        )
+        unsafe {
+            Self::from_bytes_raw(
+                build_status_byte(MidiMessageKind::PolyphonicKeyPressure.into(), channel),
+                key_number.into(),
+                pressure_amount,
+            )
+        }
     }
 
     fn channel_pressure(channel: Channel, pressure_amount: U7) -> Self {
-        Self::channel_message(
-            MidiMessageKind::ChannelPressure,
-            channel,
-            pressure_amount,
-            U7::MIN,
-        )
+        unsafe {
+            Self::from_bytes_raw(
+                build_status_byte(MidiMessageKind::ChannelPressure.into(), channel),
+                pressure_amount,
+                U7::MIN,
+            )
+        }
     }
     fn pitch_bend_change(channel: Channel, pitch_bend_value: U14) -> Self {
-        Self::channel_message(
-            MidiMessageKind::PitchBendChange,
-            channel,
-            U7((u16::from(pitch_bend_value) & 0x7f) as u8),
-            U7((u16::from(pitch_bend_value) >> 7) as u8),
-        )
+        unsafe {
+            Self::from_bytes_raw(
+                build_status_byte(MidiMessageKind::PitchBendChange.into(), channel),
+                U7((u16::from(pitch_bend_value) & 0x7f) as u8),
+                U7((u16::from(pitch_bend_value) >> 7) as u8),
+            )
+        }
     }
     fn timing_clock() -> Self {
-        Self::system_real_time_message(MidiMessageKind::TimingClock)
+        unsafe { Self::from_bytes_raw(MidiMessageKind::TimingClock.into(), U7::MIN, U7::MIN) }
     }
     fn start() -> Self {
-        Self::system_real_time_message(MidiMessageKind::Start)
+        unsafe { Self::from_bytes_raw(MidiMessageKind::Start.into(), U7::MIN, U7::MIN) }
     }
     fn r#continue() -> Self {
-        Self::system_real_time_message(MidiMessageKind::Continue)
+        unsafe { Self::from_bytes_raw(MidiMessageKind::Continue.into(), U7::MIN, U7::MIN) }
     }
     fn stop() -> Self {
-        Self::system_real_time_message(MidiMessageKind::Stop)
+        unsafe { Self::from_bytes_raw(MidiMessageKind::Stop.into(), U7::MIN, U7::MIN) }
     }
     fn active_sensing() -> Self {
-        Self::system_real_time_message(MidiMessageKind::ActiveSensing)
+        unsafe { Self::from_bytes_raw(MidiMessageKind::ActiveSensing.into(), U7::MIN, U7::MIN) }
     }
     fn system_reset() -> Self {
-        Self::system_real_time_message(MidiMessageKind::SystemReset)
+        unsafe { Self::from_bytes_raw(MidiMessageKind::SystemReset.into(), U7::MIN, U7::MIN) }
     }
 }
 
@@ -632,7 +640,7 @@ mod tests {
             StructuredMidiMessage::NoteOn {
                 channel: ch(1),
                 key_number: key_number(64),
-                velocity: u7(100)
+                velocity: u7(100),
             }
         );
         assert!(msg.is_note());
@@ -674,7 +682,7 @@ mod tests {
             StructuredMidiMessage::NoteOn {
                 channel: ch(1),
                 key_number: key_number(64),
-                velocity: u7(100)
+                velocity: u7(100),
             }
         );
         assert!(msg.is_note());
@@ -707,7 +715,7 @@ mod tests {
             StructuredMidiMessage::NoteOff {
                 channel: ch(2),
                 key_number: key_number(125),
-                velocity: u7(70)
+                velocity: u7(70),
             }
         );
         assert!(msg.is_note());
@@ -740,7 +748,7 @@ mod tests {
             StructuredMidiMessage::NoteOn {
                 channel: ch(0),
                 key_number: key_number(5),
-                velocity: u7(0)
+                velocity: u7(0),
             }
         );
         assert!(msg.is_note());
@@ -773,7 +781,7 @@ mod tests {
             StructuredMidiMessage::ControlChange {
                 channel: ch(1),
                 controller_number: controller_number(50),
-                control_value: u7(2)
+                control_value: u7(2),
             }
         );
         assert!(!msg.is_note());
@@ -805,7 +813,7 @@ mod tests {
             msg.to_structured(),
             StructuredMidiMessage::ProgramChange {
                 channel: ch(4),
-                program_number: program_number(22)
+                program_number: program_number(22),
             }
         );
         assert!(!msg.is_note());
@@ -838,7 +846,7 @@ mod tests {
             StructuredMidiMessage::PolyphonicKeyPressure {
                 channel: ch(15),
                 key_number: key_number(127),
-                pressure_amount: u7(50)
+                pressure_amount: u7(50),
             }
         );
         assert!(!msg.is_note());
@@ -870,7 +878,7 @@ mod tests {
             msg.to_structured(),
             StructuredMidiMessage::ChannelPressure {
                 channel: ch(14),
-                pressure_amount: u7(0)
+                pressure_amount: u7(0),
             }
         );
         assert!(!msg.is_note());
@@ -902,7 +910,7 @@ mod tests {
             msg.to_structured(),
             StructuredMidiMessage::PitchBendChange {
                 channel: ch(1),
-                pitch_bend_value: u14(1278)
+                pitch_bend_value: u14(1278),
             }
         );
         assert!(!msg.is_note());
