@@ -5,7 +5,7 @@ use crate::{
 };
 
 /// Trait to be implemented by struct representing a MIDI message if it supports creation of various
-/// types of MIDI messages. Only one method needs to be implemented, the rest is done by default
+/// kinds of MIDI messages. Only one method needs to be implemented, the rest is done by default
 /// methods. The advantage of this architecture is that we can have a unified factory API, no matter
 /// which underlying data structure is used.
 pub trait MidiMessageFactory: Sized {

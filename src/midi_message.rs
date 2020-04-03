@@ -282,7 +282,7 @@ pub enum MidiTimeCodeQuarterFrame {
     HoursCountLsNibble(U4),
     Last {
         hours_count_ms_bit: bool,
-        time_code_type: TimeCodeType,
+        time_code_kind: TimeCodeKind,
     },
 }
 
@@ -299,10 +299,10 @@ impl From<MidiTimeCodeQuarterFrame> for U7 {
             HoursCountLsNibble(v) => build_mtc_quarter_frame_data_byte(6, v),
             Last {
                 hours_count_ms_bit,
-                time_code_type,
+                time_code_kind,
             } => {
                 let bit_0 = hours_count_ms_bit as u8;
-                let bit_1_and_2 = u8::from(time_code_type) << 1;
+                let bit_1_and_2 = u8::from(time_code_kind) << 1;
                 build_mtc_quarter_frame_data_byte(7, U4(bit_1_and_2 | bit_0))
             }
         }
@@ -326,10 +326,10 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
             5 => MinutesCountMsNibble(extract_low_nibble_from_byte(data)),
             6 => HoursCountLsNibble(extract_low_nibble_from_byte(data)),
             7 => {
-                use TimeCodeType::*;
+                use TimeCodeKind::*;
                 Last {
                     hours_count_ms_bit: (data & 0b0000001) != 0,
-                    time_code_type: ((data & 0b0000110) >> 1).try_into().unwrap(),
+                    time_code_kind: ((data & 0b0000110) >> 1).try_into().unwrap(),
                 }
             }
             _ => panic!("Impossible"),
@@ -337,11 +337,10 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
     }
 }
 
-// TODO Rename to "kind"
-/// Time code type contained in the last quarter frame message
+/// Time code kind contained in the last quarter frame message
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
-pub enum TimeCodeType {
+pub enum TimeCodeKind {
     Fps24 = 0,
     Fps25 = 1,
     Fps30DropFrame = 2,
