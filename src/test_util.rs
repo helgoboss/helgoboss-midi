@@ -1,7 +1,8 @@
 //! Convenience methods for creating messages with minimum boilerplate, intended to be used in tests
 use crate::{
     channel as ch, controller_number as cn, key_number as kn, program_number as pn, u14, u7,
-    MidiControlChange14BitMessage, MidiMessageFactory, MidiParameterNumberMessage, RawMidiMessage,
+    MidiControlChange14BitMessage, MidiMessageFactory, MidiParameterNumberMessage,
+    MidiTimeCodeQuarterFrame, RawMidiMessage, U14,
 };
 
 type Msg = RawMidiMessage;
@@ -31,6 +32,30 @@ pub fn channel_pressure(channel: u8, pressure_amount: u8) -> Msg {
 }
 pub fn pitch_bend_change(channel: u8, pitch_bend_value: u16) -> Msg {
     Msg::pitch_bend_change(ch(channel), u14(pitch_bend_value))
+}
+
+pub fn system_exclusive_start() -> Msg {
+    Msg::system_exclusive_start()
+}
+
+pub fn midi_time_code_quarter_frame(frame: MidiTimeCodeQuarterFrame) -> Msg {
+    Msg::midi_time_code_quarter_frame(frame)
+}
+
+pub fn song_position_pointer(position: u16) -> Msg {
+    Msg::song_position_pointer(u14(position))
+}
+
+pub fn song_select(song_number: u8) -> Msg {
+    Msg::song_select(u7(song_number))
+}
+
+pub fn tune_request() -> Msg {
+    Msg::tune_request()
+}
+
+pub fn system_exclusive_end() -> Msg {
+    Msg::system_exclusive_end()
 }
 
 pub fn timing_clock() -> Msg {
@@ -80,5 +105,3 @@ pub fn rpn(channel: u8, number: u16, value: u8) -> MidiParameterNumberMessage {
 pub fn rpn_14_bit(channel: u8, number: u16, value: u16) -> MidiParameterNumberMessage {
     MidiParameterNumberMessage::registered_14_bit(ch(channel), u14(number), u14(value))
 }
-
-// TODO Add system-common and sys-ex test factory methods
