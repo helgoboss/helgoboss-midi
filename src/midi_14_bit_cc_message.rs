@@ -1,24 +1,22 @@
 use crate::{
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
-    FourteenBitValue, MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage,
-    FOURTEEN_BIT_VALUE_MAX,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, u14,
+    Channel, MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage, U14,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Midi14BitCcMessage {
     channel: Channel,
     msb_controller_number: SevenBitValue,
-    value: FourteenBitValue,
+    value: U14,
 }
 
 impl Midi14BitCcMessage {
     pub fn new(
         channel: Channel,
         msb_controller_number: SevenBitValue,
-        value: FourteenBitValue,
+        value: U14,
     ) -> Midi14BitCcMessage {
         debug_assert!(msb_controller_number < 32);
-        debug_assert!(value <= FOURTEEN_BIT_VALUE_MAX);
         Midi14BitCcMessage {
             channel,
             msb_controller_number,
@@ -38,7 +36,7 @@ impl Midi14BitCcMessage {
         self.msb_controller_number + 32
     }
 
-    pub fn get_value(&self) -> FourteenBitValue {
+    pub fn get_value(&self) -> U14 {
         self.value
     }
 
@@ -75,13 +73,13 @@ mod tests {
     #[test]
     fn basics() {
         // Given
-        let msg = Midi14BitCcMessage::new(ch(5), 2, 1057);
+        let msg = Midi14BitCcMessage::new(ch(5), 2, u14(1057));
         // When
         // Then
         assert_eq!(msg.get_channel(), ch(5));
         assert_eq!(msg.get_msb_controller_number(), 2);
         assert_eq!(msg.get_lsb_controller_number(), 34);
-        assert_eq!(msg.get_value(), 1057);
+        assert_eq!(msg.get_value(), u14(1057));
         let midi_msgs: [RawMidiMessage; 2] = msg.build_midi_messages();
         assert_eq!(
             midi_msgs,

@@ -1,6 +1,6 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, Channel, FourteenBitValue, MidiMessage,
-    MidiParameterNumberMessage, SevenBitValue, StructuredMidiMessage,
+    build_14_bit_value_from_two_7_bit_values, u14, Channel, MidiMessage,
+    MidiParameterNumberMessage, SevenBitValue, StructuredMidiMessage, U14,
 };
 
 pub struct MidiParameterNumberMessageParser {
@@ -110,7 +110,7 @@ impl ParserForOneChannel {
         let number = build_14_bit_value_from_two_7_bit_values(number_msb, number_lsb);
         let value = match self.value_lsb {
             Some(value_lsb) => build_14_bit_value_from_two_7_bit_values(value_msb, value_lsb),
-            None => value_msb as FourteenBitValue,
+            None => U14::from(value_msb),
         };
         let msg = if self.is_registered {
             if self.value_lsb.is_some() {
@@ -119,7 +119,7 @@ impl ParserForOneChannel {
                 MidiParameterNumberMessage::registered_7_bit(
                     channel,
                     number,
-                    value as SevenBitValue,
+                    u16::from(value) as SevenBitValue,
                 )
             }
         } else {
@@ -129,7 +129,7 @@ impl ParserForOneChannel {
                 MidiParameterNumberMessage::non_registered_7_bit(
                     channel,
                     number,
-                    value as SevenBitValue,
+                    u16::from(value) as SevenBitValue,
                 )
             }
         };
@@ -175,8 +175,8 @@ mod tests {
         assert_eq!(result_3, None);
         let result_4 = result_4.unwrap();
         assert_eq!(result_4.get_channel(), ch(0));
-        assert_eq!(result_4.get_number(), 420);
-        assert_eq!(result_4.get_value(), 15000);
+        assert_eq!(result_4.get_number(), u14(420));
+        assert_eq!(result_4.get_value(), u14(15000));
         assert!(result_4.is_registered());
         assert!(result_4.is_14_bit());
     }
@@ -194,8 +194,8 @@ mod tests {
         assert_eq!(result_2, None);
         let result_3 = result_3.unwrap();
         assert_eq!(result_3.get_channel(), ch(2));
-        assert_eq!(result_3.get_number(), 421);
-        assert_eq!(result_3.get_value(), 126);
+        assert_eq!(result_3.get_number(), u14(421));
+        assert_eq!(result_3.get_value(), u14(126));
         assert!(!result_3.is_registered());
         assert!(!result_3.is_14_bit());
     }
@@ -218,16 +218,16 @@ mod tests {
         assert_eq!(result_5, None);
         let result_7 = result_7.unwrap();
         assert_eq!(result_7.get_channel(), ch(0));
-        assert_eq!(result_7.get_number(), 420);
-        assert_eq!(result_7.get_value(), 15000);
+        assert_eq!(result_7.get_number(), u14(420));
+        assert_eq!(result_7.get_value(), u14(15000));
         assert!(result_7.is_registered());
         assert!(result_7.is_14_bit());
         assert_eq!(result_2, None);
         assert_eq!(result_4, None);
         let result_6 = result_6.unwrap();
         assert_eq!(result_6.get_channel(), ch(2));
-        assert_eq!(result_6.get_number(), 421);
-        assert_eq!(result_6.get_value(), 126);
+        assert_eq!(result_6.get_number(), u14(421));
+        assert_eq!(result_6.get_value(), u14(126));
         assert!(!result_6.is_registered());
         assert!(!result_6.is_14_bit());
     }
@@ -248,8 +248,8 @@ mod tests {
         assert_eq!(result_2, None);
         let result_3 = result_3.unwrap();
         assert_eq!(result_3.get_channel(), ch(2));
-        assert_eq!(result_3.get_number(), 421);
-        assert_eq!(result_3.get_value(), 126);
+        assert_eq!(result_3.get_number(), u14(421));
+        assert_eq!(result_3.get_value(), u14(126));
         assert!(!result_3.is_registered());
         assert!(!result_3.is_14_bit());
     }

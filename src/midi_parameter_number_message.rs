@@ -1,14 +1,14 @@
 use crate::{
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
-    FourteenBitValue, MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage,
-    FOURTEEN_BIT_VALUE_MAX, SEVEN_BIT_VALUE_MAX,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, u14,
+    Channel, MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage,
+    SEVEN_BIT_VALUE_MAX, U14,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct MidiParameterNumberMessage {
     channel: Channel,
-    number: FourteenBitValue,
-    value: FourteenBitValue,
+    number: U14,
+    value: U14,
     is_registered: bool,
     is_14_bit: bool,
 }
@@ -16,7 +16,7 @@ pub struct MidiParameterNumberMessage {
 impl MidiParameterNumberMessage {
     pub fn non_registered_7_bit(
         channel: Channel,
-        number: FourteenBitValue,
+        number: U14,
         value: SevenBitValue,
     ) -> MidiParameterNumberMessage {
         Self::seven_bit(channel, number, value, false)
@@ -24,15 +24,15 @@ impl MidiParameterNumberMessage {
 
     pub fn non_registered_14_bit(
         channel: Channel,
-        number: FourteenBitValue,
-        value: FourteenBitValue,
+        number: U14,
+        value: U14,
     ) -> MidiParameterNumberMessage {
         Self::fourteen_bit(channel, number, value, false)
     }
 
     pub fn registered_7_bit(
         channel: Channel,
-        number: FourteenBitValue,
+        number: U14,
         value: SevenBitValue,
     ) -> MidiParameterNumberMessage {
         Self::seven_bit(channel, number, value, true)
@@ -40,24 +40,23 @@ impl MidiParameterNumberMessage {
 
     pub fn registered_14_bit(
         channel: Channel,
-        number: FourteenBitValue,
-        value: FourteenBitValue,
+        number: U14,
+        value: U14,
     ) -> MidiParameterNumberMessage {
         Self::fourteen_bit(channel, number, value, true)
     }
 
     fn seven_bit(
         channel: Channel,
-        number: FourteenBitValue,
+        number: U14,
         value: SevenBitValue,
         is_registered: bool,
     ) -> MidiParameterNumberMessage {
-        debug_assert!(number <= FOURTEEN_BIT_VALUE_MAX);
         debug_assert!(value <= SEVEN_BIT_VALUE_MAX);
         MidiParameterNumberMessage {
             channel,
             number,
-            value: value as FourteenBitValue,
+            value: unsafe { U14::new_unchecked(value as u16) },
             is_registered,
             is_14_bit: false,
         }
@@ -65,12 +64,10 @@ impl MidiParameterNumberMessage {
 
     fn fourteen_bit(
         channel: Channel,
-        number: FourteenBitValue,
-        value: FourteenBitValue,
+        number: U14,
+        value: U14,
         is_registered: bool,
     ) -> MidiParameterNumberMessage {
-        debug_assert!(number < 16384);
-        debug_assert!(value < 16384);
         MidiParameterNumberMessage {
             channel,
             number,
@@ -84,11 +81,11 @@ impl MidiParameterNumberMessage {
         self.channel
     }
 
-    pub fn get_number(&self) -> FourteenBitValue {
+    pub fn get_number(&self) -> U14 {
         self.number
     }
 
-    pub fn get_value(&self) -> FourteenBitValue {
+    pub fn get_value(&self) -> U14 {
         self.value
     }
 
@@ -134,7 +131,7 @@ impl MidiParameterNumberMessage {
             if self.is_14_bit {
                 extract_high_7_bit_value_from_14_bit_value(self.value)
             } else {
-                self.value as u8
+                u16::from(self.value) as SevenBitValue
             },
         ));
         messages
@@ -162,12 +159,12 @@ mod tests {
     #[test]
     fn fourteen_bit_parameter_number_messages() {
         // Given
-        let msg = MidiParameterNumberMessage::registered_14_bit(ch(0), 420, 15000);
+        let msg = MidiParameterNumberMessage::registered_14_bit(ch(0), u14(420), u14(15000));
         // When
         // Then
         assert_eq!(msg.get_channel(), ch(0));
-        assert_eq!(msg.get_number(), 420);
-        assert_eq!(msg.get_value(), 15000);
+        assert_eq!(msg.get_number(), u14(420));
+        assert_eq!(msg.get_value(), u14(15000));
         assert!(msg.is_14_bit());
         assert!(msg.is_registered());
         let midi_msgs: [Option<RawMidiMessage>; 4] = msg.build_midi_messages();
@@ -185,18 +182,18 @@ mod tests {
     #[test]
     #[should_panic]
     fn seven_bit_parameter_number_messages_panic() {
-        MidiParameterNumberMessage::non_registered_7_bit(ch(0), 420, 255);
+        MidiParameterNumberMessage::non_registered_7_bit(ch(0), u14(420), 255);
     }
 
     #[test]
     fn seven_bit_parameter_number_messages() {
         // Given
-        let msg = MidiParameterNumberMessage::non_registered_7_bit(ch(2), 421, 126);
+        let msg = MidiParameterNumberMessage::non_registered_7_bit(ch(2), u14(421), 126);
         // When
         // Then
         assert_eq!(msg.get_channel(), ch(2));
-        assert_eq!(msg.get_number(), 421);
-        assert_eq!(msg.get_value(), 126);
+        assert_eq!(msg.get_number(), u14(421));
+        assert_eq!(msg.get_value(), u14(126));
         assert!(!msg.is_14_bit());
         assert!(!msg.is_registered());
         let midi_msgs: [Option<RawMidiMessage>; 4] = msg.build_midi_messages();

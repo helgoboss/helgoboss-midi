@@ -1,5 +1,5 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, Channel, Midi14BitCcMessage, MidiMessage,
+    build_14_bit_value_from_two_7_bit_values, u14, Channel, Midi14BitCcMessage, MidiMessage,
     SevenBitValue, StructuredMidiMessage,
 };
 
@@ -122,7 +122,7 @@ mod tests {
         assert_eq!(result_2.get_channel(), ch(5));
         assert_eq!(result_2.get_msb_controller_number(), 2);
         assert_eq!(result_2.get_lsb_controller_number(), 34);
-        assert_eq!(result_2.get_value(), 1057);
+        assert_eq!(result_2.get_value(), u14(1057));
     }
 
     #[test]
@@ -141,12 +141,12 @@ mod tests {
         assert_eq!(result_3.get_channel(), ch(5));
         assert_eq!(result_3.get_msb_controller_number(), 2);
         assert_eq!(result_3.get_lsb_controller_number(), 34);
-        assert_eq!(result_3.get_value(), 1057);
+        assert_eq!(result_3.get_value(), u14(1057));
         let result_4 = result_4.unwrap();
         assert_eq!(result_4.get_channel(), ch(6));
         assert_eq!(result_4.get_msb_controller_number(), 3);
         assert_eq!(result_4.get_lsb_controller_number(), 35);
-        assert_eq!(result_4.get_value(), 1058);
+        assert_eq!(result_4.get_value(), u14(1058));
     }
 
     #[test]
@@ -164,7 +164,7 @@ mod tests {
         assert_eq!(result_3.get_channel(), ch(5));
         assert_eq!(result_3.get_msb_controller_number(), 2);
         assert_eq!(result_3.get_lsb_controller_number(), 34);
-        assert_eq!(result_3.get_value(), 1057);
+        assert_eq!(result_3.get_value(), u14(1057));
     }
 
     #[test]
@@ -184,6 +184,6 @@ mod tests {
         assert_eq!(result_4.get_channel(), ch(5));
         assert_eq!(result_4.get_msb_controller_number(), 3);
         assert_eq!(result_4.get_lsb_controller_number(), 35);
-        assert_eq!(result_4.get_value(), 1058);
+        assert_eq!(result_4.get_value(), u14(1058));
     }
 }

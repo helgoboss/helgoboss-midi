@@ -9,7 +9,7 @@ impl Channel {
     pub const COUNT: u8 = 16;
 
     pub fn new(number: u8) -> Channel {
-        assert!(number <= 0xf);
+        assert!(number < Channel::COUNT);
         Channel(number)
     }
 

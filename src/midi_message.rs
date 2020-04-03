@@ -1,8 +1,8 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, build_byte_from_nibbles,
     extract_high_7_bit_value_from_14_bit_value, extract_high_nibble_from_byte,
-    extract_low_7_bit_value_from_14_bit_value, extract_low_nibble_from_byte, with_low_nibble_added,
-    Channel, FourteenBitValue, SevenBitValue, SEVEN_BIT_VALUE_MAX,
+    extract_low_7_bit_value_from_14_bit_value, extract_low_nibble_from_byte, u14,
+    with_low_nibble_added, Channel, SevenBitValue, SEVEN_BIT_VALUE_MAX, U14,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use std::convert::TryInto;
@@ -169,7 +169,7 @@ pub trait MidiMessage {
         }
     }
 
-    fn get_pitch_bend_value(&self) -> Option<FourteenBitValue> {
+    fn get_pitch_bend_value(&self) -> Option<U14> {
         if self.get_kind() != MidiMessageKind::PitchBendChange {
             return None;
         }
@@ -289,12 +289,12 @@ pub trait MidiMessageFactory: Sized {
             0,
         )
     }
-    fn pitch_bend_change(channel: Channel, pitch_bend_value: FourteenBitValue) -> Self {
+    fn pitch_bend_change(channel: Channel, pitch_bend_value: U14) -> Self {
         Self::channel_message(
             MidiMessageKind::PitchBendChange,
             channel,
-            (pitch_bend_value & 0x7f) as SevenBitValue,
-            (pitch_bend_value >> 7) as SevenBitValue,
+            (u16::from(pitch_bend_value) & 0x7f) as SevenBitValue,
+            (u16::from(pitch_bend_value) >> 7) as SevenBitValue,
         )
     }
     fn timing_clock() -> Self {
@@ -440,7 +440,7 @@ pub enum StructuredMidiMessage {
     },
     PitchBendChange {
         channel: Channel,
-        pitch_bend_value: FourteenBitValue,
+        pitch_bend_value: U14,
     },
     // System exclusive messages
     SystemExclusiveStart,
@@ -878,7 +878,7 @@ mod tests {
     #[test]
     fn pitch_bend_change() {
         // Given
-        let msg = RawMidiMessage::pitch_bend_change(ch(1), 1278);
+        let msg = RawMidiMessage::pitch_bend_change(ch(1), u14(1278));
         // When
         // Then
         assert_eq!(msg.get_status_byte(), 0xe1);
@@ -892,14 +892,14 @@ mod tests {
         assert_eq!(msg.get_velocity(), None);
         assert_eq!(msg.get_controller_number(), None);
         assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), Some(1278));
+        assert_eq!(msg.get_pitch_bend_value(), Some(u14(1278)));
         assert_eq!(msg.get_pressure_amount(), None);
         assert_eq!(msg.get_program_number(), None);
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::PitchBendChange {
                 channel: ch(1),
-                pitch_bend_value: 1278
+                pitch_bend_value: u14(1278)
             }
         );
         assert!(!msg.is_note());
