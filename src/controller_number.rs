@@ -89,12 +89,12 @@ impl ControllerNumber {
         ControllerNumber(number)
     }
 
-    pub fn can_act_as_14_bit_msb(&self) -> bool {
-        self.0 < 32
+    pub fn can_be_part_of_14_bit_message(&self) -> bool {
+        self.0 < 64
     }
 
-    pub fn can_be_part_of_parameter_number_message(&self) -> bool {
-        matches!(self.0, 98 | 99 | 100 | 101 | 38 | 6)
+    pub fn can_act_as_14_bit_msb(&self) -> bool {
+        self.0 < 32
     }
 
     pub fn get_corresponding_14_bit_lsb(&self) -> Result<ControllerNumber, ()> {
@@ -102,6 +102,10 @@ impl ControllerNumber {
             return Err(());
         }
         Ok(ControllerNumber(self.0 + 32))
+    }
+
+    pub fn can_be_part_of_parameter_number_message(&self) -> bool {
+        matches!(self.0, 98 | 99 | 100 | 101 | 38 | 6)
     }
 }
 

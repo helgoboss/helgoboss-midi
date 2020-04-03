@@ -4,20 +4,20 @@ use crate::{
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Midi14BitCcMessage {
+pub struct Midi14BitControlChangeMessage {
     channel: Channel,
     msb_controller_number: ControllerNumber,
     value: U14,
 }
 
-impl Midi14BitCcMessage {
+impl Midi14BitControlChangeMessage {
     pub fn new(
         channel: Channel,
         msb_controller_number: ControllerNumber,
         value: U14,
-    ) -> Midi14BitCcMessage {
+    ) -> Midi14BitControlChangeMessage {
         assert!(msb_controller_number.can_act_as_14_bit_msb());
-        Midi14BitCcMessage {
+        Midi14BitControlChangeMessage {
             channel,
             msb_controller_number,
             value,
@@ -58,16 +58,6 @@ impl Midi14BitCcMessage {
     }
 }
 
-// TODO Wording: can_act_as or could_be_ should be unified
-pub fn could_be_part_of_14_bit_cc_message(msg: &impl MidiMessage) -> bool {
-    match msg.to_structured() {
-        StructuredMidiMessage::ControlChange {
-            controller_number, ..
-        } => controller_number < ControllerNumber(64),
-        _ => false,
-    }
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -76,7 +66,7 @@ mod tests {
     #[test]
     fn basics() {
         // Given
-        let msg = Midi14BitCcMessage::new(ch(5), cn(2), u14(1057));
+        let msg = Midi14BitControlChangeMessage::new(ch(5), cn(2), u14(1057));
         // When
         // Then
         assert_eq!(msg.get_channel(), ch(5));
@@ -91,21 +81,5 @@ mod tests {
                 RawMidiMessage::control_change(ch(5), cn(34), u7(33))
             ]
         );
-    }
-
-    #[test]
-    fn could_be_part_of_14_bit_cc_message_test() {
-        // Given
-        // When
-        // Then
-        assert!(could_be_part_of_14_bit_cc_message(
-            &RawMidiMessage::control_change(ch(5), cn(2), u7(8))
-        ));
-        assert!(could_be_part_of_14_bit_cc_message(
-            &RawMidiMessage::control_change(ch(5), cn(34), u7(33))
-        ));
-        assert!(!could_be_part_of_14_bit_cc_message(
-            &RawMidiMessage::control_change(ch(5), cn(67), u7(8))
-        ));
     }
 }

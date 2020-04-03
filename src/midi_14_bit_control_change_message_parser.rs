@@ -1,20 +1,20 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, Channel, ControllerNumber, Midi14BitCcMessage,
-    MidiMessage, StructuredMidiMessage, U7,
+    build_14_bit_value_from_two_7_bit_values, Channel, ControllerNumber,
+    Midi14BitControlChangeMessage, MidiMessage, StructuredMidiMessage, U7,
 };
 
-pub struct Midi14BitCcMessageParser {
+pub struct Midi14BitControlChangeMessageParser {
     parser_by_channel: [ParserForOneChannel; Channel::COUNT as usize],
 }
 
-impl Midi14BitCcMessageParser {
-    pub fn new() -> Midi14BitCcMessageParser {
-        Midi14BitCcMessageParser {
+impl Midi14BitControlChangeMessageParser {
+    pub fn new() -> Midi14BitControlChangeMessageParser {
+        Midi14BitControlChangeMessageParser {
             parser_by_channel: [ParserForOneChannel::new(); Channel::COUNT as usize],
         }
     }
 
-    pub fn feed(&mut self, msg: &impl MidiMessage) -> Option<Midi14BitCcMessage> {
+    pub fn feed(&mut self, msg: &impl MidiMessage) -> Option<Midi14BitControlChangeMessage> {
         let channel = msg.get_channel()?;
         self.parser_by_channel[usize::from(channel)].feed(msg)
     }
@@ -40,7 +40,7 @@ impl ParserForOneChannel {
         }
     }
 
-    fn feed(&mut self, msg: &impl MidiMessage) -> Option<Midi14BitCcMessage> {
+    fn feed(&mut self, msg: &impl MidiMessage) -> Option<Midi14BitControlChangeMessage> {
         match msg.to_structured() {
             StructuredMidiMessage::ControlChange {
                 controller_number,
@@ -64,7 +64,7 @@ impl ParserForOneChannel {
         &mut self,
         msb_controller_number: ControllerNumber,
         value_msb: U7,
-    ) -> Option<Midi14BitCcMessage> {
+    ) -> Option<Midi14BitControlChangeMessage> {
         self.msb_controller_number = Some(msb_controller_number);
         self.value_msb = Some(value_msb);
         None
@@ -75,7 +75,7 @@ impl ParserForOneChannel {
         channel: Channel,
         lsb_controller_number: ControllerNumber,
         value_lsb: U7,
-    ) -> Option<Midi14BitCcMessage> {
+    ) -> Option<Midi14BitControlChangeMessage> {
         let msb_controller_number = self.msb_controller_number?;
         let value_msb = self.value_msb?;
         if lsb_controller_number
@@ -86,7 +86,7 @@ impl ParserForOneChannel {
             return None;
         }
         let value = build_14_bit_value_from_two_7_bit_values(value_msb, value_lsb);
-        Some(Midi14BitCcMessage::new(
+        Some(Midi14BitControlChangeMessage::new(
             channel,
             msb_controller_number,
             value,
@@ -105,7 +105,7 @@ mod tests {
     #[test]
     fn should_ignore_non_contributing_midi_messages() {
         // Given
-        let mut parser = Midi14BitCcMessageParser::new();
+        let mut parser = Midi14BitControlChangeMessageParser::new();
         // When
         // Then
         assert_eq!(
@@ -125,7 +125,7 @@ mod tests {
     #[test]
     fn should_return_14_bit_result_message_on_second_lsb_midi_message() {
         // Given
-        let mut parser = Midi14BitCcMessageParser::new();
+        let mut parser = Midi14BitControlChangeMessageParser::new();
         // When
         let result_1 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
         let result_2 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(34), u7(33)));
@@ -141,7 +141,7 @@ mod tests {
     #[test]
     fn should_process_different_channels_independently() {
         // Given
-        let mut parser = Midi14BitCcMessageParser::new();
+        let mut parser = Midi14BitControlChangeMessageParser::new();
         // When
         let result_1 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
         let result_2 = parser.feed(&RawMidiMessage::control_change(ch(6), cn(3), u7(8)));
@@ -165,7 +165,7 @@ mod tests {
     #[test]
     fn should_ignore_non_contributing_midi_messages_mixed() {
         // Given
-        let mut parser = Midi14BitCcMessageParser::new();
+        let mut parser = Midi14BitControlChangeMessageParser::new();
         // When
         let result_1 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
         let result_2 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(77), u7(9)));
@@ -183,7 +183,7 @@ mod tests {
     #[test]
     fn should_only_consider_last_incoming_msb() {
         // Given
-        let mut parser = Midi14BitCcMessageParser::new();
+        let mut parser = Midi14BitControlChangeMessageParser::new();
         // When
         let result_1 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
         let result_2 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(3), u7(8)));

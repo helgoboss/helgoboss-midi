@@ -402,8 +402,6 @@ pub enum MidiMessageMainCategory {
 /// usage via pattern matching. For that reason each variant is a struct-like enum, which is ideal
 /// for pattern matching while it is less ideal for reuse (the data contained in the variant can't
 /// be passed around in one piece).
-/// TODO Because each enum variant is not only read-only public but also constructable public,
-///  right now invalid MIDI messages can be created! Avoid that by introducing newtypes.
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum StructuredMidiMessage {
     // Channel messages
