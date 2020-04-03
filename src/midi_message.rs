@@ -2,7 +2,7 @@ use crate::{
     build_14_bit_value_from_two_7_bit_values, build_byte_from_nibbles,
     extract_high_7_bit_value_from_14_bit_value, extract_high_nibble_from_byte,
     extract_low_7_bit_value_from_14_bit_value, extract_low_nibble_from_byte, with_low_nibble_added,
-    Byte, Channel, FourteenBitValue, SevenBitValue, SEVEN_BIT_VALUE_MAX,
+    Channel, FourteenBitValue, SevenBitValue, SEVEN_BIT_VALUE_MAX,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use std::convert::TryInto;
@@ -18,7 +18,7 @@ use strum_macros::EnumIter;
 /// Please also implement the trait `MidiMessageFactory` for your struct if creating new MIDI
 /// messages programmatically should be supported.
 pub trait MidiMessage {
-    fn get_status_byte(&self) -> Byte;
+    fn get_status_byte(&self) -> u8;
 
     fn get_data_byte_1(&self) -> SevenBitValue;
 
@@ -186,7 +186,7 @@ pub trait MidiMessage {
 /// which underlying data structure is used.
 pub trait MidiMessageFactory: Sized {
     unsafe fn from_bytes_raw(
-        status_byte: Byte,
+        status_byte: u8,
         data_byte_1: SevenBitValue,
         data_byte_2: SevenBitValue,
     ) -> Self;
@@ -198,7 +198,7 @@ pub trait MidiMessageFactory: Sized {
     // acts a bit like a parse function where client code should be able to recover from wrong
     // input.
     fn from_bytes(
-        status_byte: Byte,
+        status_byte: u8,
         data_byte_1: SevenBitValue,
         data_byte_2: SevenBitValue,
     ) -> Result<Self, &'static str> {
@@ -586,7 +586,7 @@ impl MidiMessage for RawMidiMessage {
 }
 
 fn get_midi_message_kind_from_status_byte(
-    status_byte: Byte,
+    status_byte: u8,
 ) -> Result<MidiMessageKind, TryFromPrimitiveError<MidiMessageKind>> {
     let high_status_byte_nibble = extract_high_nibble_from_byte(status_byte);
     if high_status_byte_nibble == Channel::MAX {
