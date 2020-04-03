@@ -1,6 +1,6 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, Channel, MidiMessage, MidiParameterNumberMessage,
-    StructuredMidiMessage, U14, U7,
+    StructuredMidiMessage, U7,
 };
 
 pub struct MidiParameterNumberMessageParser {

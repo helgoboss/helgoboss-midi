@@ -1,6 +1,6 @@
 use crate::{
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
-    ControllerNumber, MidiMessage, MidiMessageFactory, StructuredMidiMessage, U14, U7,
+    ControllerNumber, MidiMessageFactory, U14, U7,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
