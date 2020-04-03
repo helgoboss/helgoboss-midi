@@ -1,22 +1,22 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, FourteenBitValue, MidiMessage,
-    MidiParameterNumberMessage, Nibble, SevenBitValue, StructuredMidiMessage, NIBBLE_COUNT,
+    build_14_bit_value_from_two_7_bit_values, Channel, FourteenBitValue, MidiMessage,
+    MidiParameterNumberMessage, SevenBitValue, StructuredMidiMessage,
 };
 
 pub struct MidiParameterNumberMessageParser {
-    parser_by_channel: [ParserForOneChannel; NIBBLE_COUNT as usize],
+    parser_by_channel: [ParserForOneChannel; Channel::COUNT as usize],
 }
 
 impl MidiParameterNumberMessageParser {
     pub fn new() -> MidiParameterNumberMessageParser {
         MidiParameterNumberMessageParser {
-            parser_by_channel: [ParserForOneChannel::new(); NIBBLE_COUNT as usize],
+            parser_by_channel: [ParserForOneChannel::new(); Channel::COUNT as usize],
         }
     }
 
     pub fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiParameterNumberMessage> {
         let channel = msg.get_channel()?;
-        self.parser_by_channel[channel as usize].feed(msg)
+        self.parser_by_channel[usize::from(channel)].feed(msg)
     }
 
     pub fn reset(&mut self) {
@@ -102,7 +102,7 @@ impl ParserForOneChannel {
 
     fn process_value_msb(
         &mut self,
-        channel: Nibble,
+        channel: Channel,
         value_msb: SevenBitValue,
     ) -> Option<MidiParameterNumberMessage> {
         let number_lsb = self.number_lsb?;
@@ -144,7 +144,7 @@ impl ParserForOneChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{MidiMessageFactory, RawMidiMessage};
+    use crate::{ch, MidiMessageFactory, RawMidiMessage};
 
     #[test]
     fn should_ignore_non_contributing_midi_messages() {
@@ -152,9 +152,12 @@ mod tests {
         let mut parser = MidiParameterNumberMessageParser::new();
         // When
         // Then
-        assert_eq!(parser.feed(&RawMidiMessage::note_on(0, 100, 100)), None);
-        assert_eq!(parser.feed(&RawMidiMessage::note_on(0, 100, 120)), None);
-        assert_eq!(parser.feed(&RawMidiMessage::control_change(0, 80, 1)), None);
+        assert_eq!(parser.feed(&RawMidiMessage::note_on(ch(0), 100, 100)), None);
+        assert_eq!(parser.feed(&RawMidiMessage::note_on(ch(0), 100, 120)), None);
+        assert_eq!(
+            parser.feed(&RawMidiMessage::control_change(ch(0), 80, 1)),
+            None
+        );
     }
 
     #[test]
@@ -162,16 +165,16 @@ mod tests {
         // Given
         let mut parser = MidiParameterNumberMessageParser::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(0, 101, 3));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(0, 100, 36));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(0, 38, 24));
-        let result_4 = parser.feed(&RawMidiMessage::control_change(0, 6, 117));
+        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(0), 101, 3));
+        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(0), 100, 36));
+        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(0), 38, 24));
+        let result_4 = parser.feed(&RawMidiMessage::control_change(ch(0), 6, 117));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
         assert_eq!(result_3, None);
         let result_4 = result_4.unwrap();
-        assert_eq!(result_4.get_channel(), 0);
+        assert_eq!(result_4.get_channel(), ch(0));
         assert_eq!(result_4.get_number(), 420);
         assert_eq!(result_4.get_value(), 15000);
         assert!(result_4.is_registered());
@@ -183,14 +186,14 @@ mod tests {
         // Given
         let mut parser = MidiParameterNumberMessageParser::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(2, 99, 3));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(2, 98, 37));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(2, 6, 126));
+        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(2), 99, 3));
+        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(2), 98, 37));
+        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(2), 6, 126));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
         let result_3 = result_3.unwrap();
-        assert_eq!(result_3.get_channel(), 2);
+        assert_eq!(result_3.get_channel(), ch(2));
         assert_eq!(result_3.get_number(), 421);
         assert_eq!(result_3.get_value(), 126);
         assert!(!result_3.is_registered());
@@ -202,19 +205,19 @@ mod tests {
         // Given
         let mut parser = MidiParameterNumberMessageParser::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(0, 101, 3));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(2, 99, 3));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(0, 100, 36));
-        let result_4 = parser.feed(&RawMidiMessage::control_change(2, 98, 37));
-        let result_5 = parser.feed(&RawMidiMessage::control_change(0, 38, 24));
-        let result_6 = parser.feed(&RawMidiMessage::control_change(2, 6, 126));
-        let result_7 = parser.feed(&RawMidiMessage::control_change(0, 6, 117));
+        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(0), 101, 3));
+        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(2), 99, 3));
+        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(0), 100, 36));
+        let result_4 = parser.feed(&RawMidiMessage::control_change(ch(2), 98, 37));
+        let result_5 = parser.feed(&RawMidiMessage::control_change(ch(0), 38, 24));
+        let result_6 = parser.feed(&RawMidiMessage::control_change(ch(2), 6, 126));
+        let result_7 = parser.feed(&RawMidiMessage::control_change(ch(0), 6, 117));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_3, None);
         assert_eq!(result_5, None);
         let result_7 = result_7.unwrap();
-        assert_eq!(result_7.get_channel(), 0);
+        assert_eq!(result_7.get_channel(), ch(0));
         assert_eq!(result_7.get_number(), 420);
         assert_eq!(result_7.get_value(), 15000);
         assert!(result_7.is_registered());
@@ -222,7 +225,7 @@ mod tests {
         assert_eq!(result_2, None);
         assert_eq!(result_4, None);
         let result_6 = result_6.unwrap();
-        assert_eq!(result_6.get_channel(), 2);
+        assert_eq!(result_6.get_channel(), ch(2));
         assert_eq!(result_6.get_number(), 421);
         assert_eq!(result_6.get_value(), 126);
         assert!(!result_6.is_registered());
@@ -234,17 +237,17 @@ mod tests {
         // Given
         let mut parser = MidiParameterNumberMessageParser::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(2, 99, 3));
-        parser.feed(&RawMidiMessage::control_change(2, 34, 5));
-        parser.feed(&RawMidiMessage::note_on(2, 100, 105));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(2, 98, 37));
-        parser.feed(&RawMidiMessage::control_change(2, 50, 6));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(2, 6, 126));
+        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(2), 99, 3));
+        parser.feed(&RawMidiMessage::control_change(ch(2), 34, 5));
+        parser.feed(&RawMidiMessage::note_on(ch(2), 100, 105));
+        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(2), 98, 37));
+        parser.feed(&RawMidiMessage::control_change(ch(2), 50, 6));
+        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(2), 6, 126));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
         let result_3 = result_3.unwrap();
-        assert_eq!(result_3.get_channel(), 2);
+        assert_eq!(result_3.get_channel(), ch(2));
         assert_eq!(result_3.get_number(), 421);
         assert_eq!(result_3.get_value(), 126);
         assert!(!result_3.is_registered());

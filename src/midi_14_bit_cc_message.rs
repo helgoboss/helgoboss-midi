@@ -1,23 +1,22 @@
 use crate::{
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
-    FourteenBitValue, MidiMessage, MidiMessageFactory, Nibble, SevenBitValue,
-    StructuredMidiMessage, FOURTEEN_BIT_VALUE_MAX, NIBBLE_MAX,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
+    FourteenBitValue, MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage,
+    FOURTEEN_BIT_VALUE_MAX,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
 pub struct Midi14BitCcMessage {
-    channel: Nibble,
+    channel: Channel,
     msb_controller_number: SevenBitValue,
     value: FourteenBitValue,
 }
 
 impl Midi14BitCcMessage {
     pub fn new(
-        channel: Nibble,
+        channel: Channel,
         msb_controller_number: SevenBitValue,
         value: FourteenBitValue,
     ) -> Midi14BitCcMessage {
-        debug_assert!(channel <= NIBBLE_MAX);
         debug_assert!(msb_controller_number < 32);
         debug_assert!(value <= FOURTEEN_BIT_VALUE_MAX);
         Midi14BitCcMessage {
@@ -27,7 +26,7 @@ impl Midi14BitCcMessage {
         }
     }
 
-    pub fn get_channel(&self) -> Nibble {
+    pub fn get_channel(&self) -> Channel {
         self.channel
     }
 
@@ -71,15 +70,15 @@ pub fn could_be_part_of_14_bit_cc_message(msg: &impl MidiMessage) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::RawMidiMessage;
+    use crate::{ch, RawMidiMessage};
 
     #[test]
     fn basics() {
         // Given
-        let msg = Midi14BitCcMessage::new(5, 2, 1057);
+        let msg = Midi14BitCcMessage::new(ch(5), 2, 1057);
         // When
         // Then
-        assert_eq!(msg.get_channel(), 5);
+        assert_eq!(msg.get_channel(), ch(5));
         assert_eq!(msg.get_msb_controller_number(), 2);
         assert_eq!(msg.get_lsb_controller_number(), 34);
         assert_eq!(msg.get_value(), 1057);
@@ -87,8 +86,8 @@ mod tests {
         assert_eq!(
             midi_msgs,
             [
-                RawMidiMessage::control_change(5, 2, 8),
-                RawMidiMessage::control_change(5, 34, 33)
+                RawMidiMessage::control_change(ch(5), 2, 8),
+                RawMidiMessage::control_change(ch(5), 34, 33)
             ]
         );
     }
@@ -99,13 +98,13 @@ mod tests {
         // When
         // Then
         assert!(could_be_part_of_14_bit_cc_message(
-            &RawMidiMessage::control_change(5, 2, 8)
+            &RawMidiMessage::control_change(ch(5), 2, 8)
         ));
         assert!(could_be_part_of_14_bit_cc_message(
-            &RawMidiMessage::control_change(5, 34, 33)
+            &RawMidiMessage::control_change(ch(5), 34, 33)
         ));
         assert!(!could_be_part_of_14_bit_cc_message(
-            &RawMidiMessage::control_change(5, 67, 8)
+            &RawMidiMessage::control_change(ch(5), 67, 8)
         ));
     }
 }
