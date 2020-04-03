@@ -4,20 +4,20 @@ use crate::{
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
-pub struct Midi14BitControlChangeMessage {
+pub struct MidiControlChange14BitMessage {
     channel: Channel,
     msb_controller_number: ControllerNumber,
     value: U14,
 }
 
-impl Midi14BitControlChangeMessage {
+impl MidiControlChange14BitMessage {
     pub fn new(
         channel: Channel,
         msb_controller_number: ControllerNumber,
         value: U14,
-    ) -> Midi14BitControlChangeMessage {
+    ) -> MidiControlChange14BitMessage {
         assert!(msb_controller_number.can_act_as_14_bit_msb());
-        Midi14BitControlChangeMessage {
+        MidiControlChange14BitMessage {
             channel,
             msb_controller_number,
             value,
@@ -66,7 +66,7 @@ mod tests {
     #[test]
     fn basics() {
         // Given
-        let msg = Midi14BitControlChangeMessage::new(ch(5), cn(2), u14(1057));
+        let msg = MidiControlChange14BitMessage::new(ch(5), cn(2), u14(1057));
         // When
         // Then
         assert_eq!(msg.get_channel(), ch(5));

@@ -1,7 +1,7 @@
 //! Convenience methods for creating messages with minimum boilerplate, intended to be used in tests
 use crate::{
     channel as ch, controller_number as cn, key_number as kn, program_number as pn, u14, u7,
-    Midi14BitControlChangeMessage, MidiMessageFactory, MidiParameterNumberMessage, RawMidiMessage,
+    MidiControlChange14BitMessage, MidiMessageFactory, MidiParameterNumberMessage, RawMidiMessage,
 };
 
 type Msg = RawMidiMessage;
@@ -61,8 +61,8 @@ pub fn control_change_14_bit(
     channel: u8,
     msb_controller_number: u8,
     value: u16,
-) -> Midi14BitControlChangeMessage {
-    Midi14BitControlChangeMessage::new(ch(channel), cn(msb_controller_number), u14(value))
+) -> MidiControlChange14BitMessage {
+    MidiControlChange14BitMessage::new(ch(channel), cn(msb_controller_number), u14(value))
 }
 
 pub fn nrpn(channel: u8, number: u16, value: u8) -> MidiParameterNumberMessage {
