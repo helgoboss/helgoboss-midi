@@ -80,3 +80,5 @@ pub fn rpn(channel: u8, number: u16, value: u8) -> MidiParameterNumberMessage {
 pub fn rpn_14_bit(channel: u8, number: u16, value: u16) -> MidiParameterNumberMessage {
     MidiParameterNumberMessage::registered_14_bit(ch(channel), u14(number), u14(value))
 }
+
+// TODO Add system-common and sys-ex test factory methods

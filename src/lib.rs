@@ -34,6 +34,9 @@ pub use controller_number::*;
 mod program_number;
 pub use program_number::*;
 
+mod u4;
+pub use u4::*;
+
 mod u7;
 pub use u7::*;
 

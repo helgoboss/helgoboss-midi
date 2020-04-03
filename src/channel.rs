@@ -1,3 +1,5 @@
+use crate::U4;
+
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct Channel(pub(crate) u8);
 
@@ -15,6 +17,18 @@ impl Channel {
 
     pub const unsafe fn new_unchecked(number: u8) -> Channel {
         Channel(number)
+    }
+}
+
+impl From<U4> for Channel {
+    fn from(value: U4) -> Self {
+        Channel(value.into())
+    }
+}
+
+impl From<Channel> for U4 {
+    fn from(value: Channel) -> Self {
+        U4(value.into())
     }
 }
 

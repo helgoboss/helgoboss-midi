@@ -1,7 +1,8 @@
 use crate::{
     build_status_byte, extract_high_7_bit_value_from_14_bit_value,
     extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber, MidiMessage,
-    MidiMessageFactory, MidiMessageKind, ProgramNumber, RawMidiMessage, U14, U7,
+    MidiMessageFactory, MidiMessageKind, MidiTimeCodeQuarterFrame, ProgramNumber, RawMidiMessage,
+    U14, U4, U7,
 };
 
 /// MIDI message implemented as an enum where each variant contains exactly the data which is
@@ -47,9 +48,13 @@ pub enum StructuredMidiMessage {
     // System exclusive messages
     SystemExclusiveStart,
     // System common messages
-    MidiTimeCodeQuarterFrame,
-    SongPositionPointer,
-    SongSelect,
+    MidiTimeCodeQuarterFrame(MidiTimeCodeQuarterFrame),
+    SongPositionPointer {
+        position: U14,
+    },
+    SongSelect {
+        song_number: U7,
+    },
     TuneRequest,
     SystemExclusiveEnd,
     // System real-time messages
@@ -94,9 +99,9 @@ impl MidiMessage for StructuredMidiMessage {
                 build_status_byte(MidiMessageKind::PitchBendChange.into(), *channel)
             }
             SystemExclusiveStart => MidiMessageKind::SystemExclusiveStart.into(),
-            MidiTimeCodeQuarterFrame => MidiMessageKind::MidiTimeCodeQuarterFrame.into(),
-            SongPositionPointer => MidiMessageKind::SongPositionPointer.into(),
-            SongSelect => MidiMessageKind::SongSelect.into(),
+            MidiTimeCodeQuarterFrame(_) => MidiMessageKind::MidiTimeCodeQuarterFrame.into(),
+            SongPositionPointer { .. } => MidiMessageKind::SongPositionPointer.into(),
+            SongSelect { .. } => MidiMessageKind::SongSelect.into(),
             TuneRequest => MidiMessageKind::TuneRequest.into(),
             SystemExclusiveEnd => MidiMessageKind::SystemExclusiveEnd.into(),
             TimingClock => MidiMessageKind::TimingClock.into(),
@@ -124,7 +129,20 @@ impl MidiMessage for StructuredMidiMessage {
             PitchBendChange {
                 pitch_bend_value, ..
             } => extract_low_7_bit_value_from_14_bit_value(*pitch_bend_value),
-            _ => U7::MIN,
+            SystemExclusiveStart => U7::MIN,
+            MidiTimeCodeQuarterFrame(frame) => (*frame).into(),
+            SongPositionPointer { position } => {
+                extract_low_7_bit_value_from_14_bit_value(*position)
+            }
+            SongSelect { song_number } => *song_number,
+            TuneRequest => U7::MIN,
+            SystemExclusiveEnd => U7::MIN,
+            TimingClock => U7::MIN,
+            Start => U7::MIN,
+            Continue => U7::MIN,
+            Stop => U7::MIN,
+            ActiveSensing => U7::MIN,
+            SystemReset => U7::MIN,
         }
     }
 
@@ -142,7 +160,20 @@ impl MidiMessage for StructuredMidiMessage {
             PitchBendChange {
                 pitch_bend_value, ..
             } => extract_high_7_bit_value_from_14_bit_value(*pitch_bend_value),
-            _ => U7::MIN,
+            SystemExclusiveStart => U7::MIN,
+            MidiTimeCodeQuarterFrame(frame) => U7::MIN,
+            SongPositionPointer { position } => {
+                extract_high_7_bit_value_from_14_bit_value(*position)
+            }
+            SongSelect { .. } => U7::MIN,
+            TuneRequest => U7::MIN,
+            SystemExclusiveEnd => U7::MIN,
+            TimingClock => U7::MIN,
+            Start => U7::MIN,
+            Continue => U7::MIN,
+            Stop => U7::MIN,
+            ActiveSensing => U7::MIN,
+            SystemReset => U7::MIN,
         }
     }
 

@@ -1,7 +1,7 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, extract_high_7_bit_value_from_14_bit_value,
     extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber, ProgramNumber,
-    StructuredMidiMessage, U14, U7,
+    StructuredMidiMessage, U14, U4, U7,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use std::convert::TryInto;
@@ -74,9 +74,18 @@ pub trait MidiMessage {
                 ),
             },
             SystemExclusiveStart => StructuredMidiMessage::SystemExclusiveStart,
-            MidiTimeCodeQuarterFrame => StructuredMidiMessage::MidiTimeCodeQuarterFrame,
-            SongPositionPointer => StructuredMidiMessage::SongPositionPointer,
-            SongSelect => StructuredMidiMessage::SongSelect,
+            MidiTimeCodeQuarterFrame => {
+                StructuredMidiMessage::MidiTimeCodeQuarterFrame(self.get_data_byte_1().into())
+            }
+            SongPositionPointer => StructuredMidiMessage::SongPositionPointer {
+                position: build_14_bit_value_from_two_7_bit_values(
+                    self.get_data_byte_2(),
+                    self.get_data_byte_1(),
+                ),
+            },
+            SongSelect => StructuredMidiMessage::SongSelect {
+                song_number: self.get_data_byte_1(),
+            },
             TuneRequest => StructuredMidiMessage::TuneRequest,
             SystemExclusiveEnd => StructuredMidiMessage::SystemExclusiveEnd,
             TimingClock => StructuredMidiMessage::TimingClock,
@@ -180,6 +189,7 @@ pub trait MidiMessage {
 // The most low-level kind of a MIDI message
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive, EnumIter)]
 #[repr(u8)]
+// TODO We need a way to represent undefined MIDI messages (unknown kind)
 pub enum MidiMessageKind {
     // Channel messages = channel voice messages + channel mode messages (given value represents
     // channel 0 status byte)
@@ -260,6 +270,84 @@ pub enum MidiMessageMainCategory {
     System,
 }
 
+/// Content of a MIDI time code quarter frame message. It contains a part of the current time code.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MidiTimeCodeQuarterFrame {
+    FrameCountLsNibble(U4),
+    FrameCountMsNibble(U4),
+    SecondsCountLsNibble(U4),
+    SecondsCountMsNibble(U4),
+    MinutesCountLsNibble(U4),
+    MinutesCountMsNibble(U4),
+    HoursCountLsNibble(U4),
+    Last {
+        hours_count_ms_bit: bool,
+        time_code_type: TimeCodeType,
+    },
+}
+
+impl From<MidiTimeCodeQuarterFrame> for U7 {
+    fn from(frame: MidiTimeCodeQuarterFrame) -> Self {
+        use MidiTimeCodeQuarterFrame::*;
+        match frame {
+            FrameCountLsNibble(v) => build_mtc_quarter_frame_data_byte(0, v),
+            FrameCountMsNibble(v) => build_mtc_quarter_frame_data_byte(1, v),
+            SecondsCountLsNibble(v) => build_mtc_quarter_frame_data_byte(2, v),
+            SecondsCountMsNibble(v) => build_mtc_quarter_frame_data_byte(3, v),
+            MinutesCountLsNibble(v) => build_mtc_quarter_frame_data_byte(4, v),
+            MinutesCountMsNibble(v) => build_mtc_quarter_frame_data_byte(5, v),
+            HoursCountLsNibble(v) => build_mtc_quarter_frame_data_byte(6, v),
+            Last {
+                hours_count_ms_bit,
+                time_code_type,
+            } => {
+                let bit_0 = hours_count_ms_bit as u8;
+                let bit_1_and_2 = u8::from(time_code_type) << 1;
+                build_mtc_quarter_frame_data_byte(7, U4(bit_1_and_2 | bit_0))
+            }
+        }
+    }
+}
+
+fn build_mtc_quarter_frame_data_byte(kind: u8, data: U4) -> U7 {
+    U7((kind << 4) | u8::from(data))
+}
+
+impl From<U7> for MidiTimeCodeQuarterFrame {
+    fn from(data_byte_1: U7) -> Self {
+        use MidiTimeCodeQuarterFrame::*;
+        let data = u8::from(data_byte_1);
+        match extract_high_nibble_from_byte(data) {
+            0 => FrameCountLsNibble(extract_low_nibble_from_byte(data)),
+            1 => FrameCountMsNibble(extract_low_nibble_from_byte(data)),
+            2 => SecondsCountLsNibble(extract_low_nibble_from_byte(data)),
+            3 => SecondsCountMsNibble(extract_low_nibble_from_byte(data)),
+            4 => MinutesCountLsNibble(extract_low_nibble_from_byte(data)),
+            5 => MinutesCountMsNibble(extract_low_nibble_from_byte(data)),
+            6 => HoursCountLsNibble(extract_low_nibble_from_byte(data)),
+            7 => {
+                use TimeCodeType::*;
+                Last {
+                    hours_count_ms_bit: (data & 0b0000001) != 0,
+                    time_code_type: ((data & 0b0000110) >> 1).try_into().unwrap(),
+                }
+            }
+            _ => panic!("Impossible"),
+        }
+    }
+}
+
+// TODO Rename to "kind"
+/// Time code type contained in the last quarter frame message
+#[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive)]
+#[repr(u8)]
+pub enum TimeCodeType {
+    Fps24 = 0,
+    Fps25 = 1,
+    Fps30DropFrame = 2,
+    Fps30NonDrop = 3,
+}
+
 fn extract_channel_from_status_byte(byte: u8) -> Channel {
     Channel(byte & 0x0f)
 }
@@ -276,6 +364,10 @@ pub(crate) fn get_midi_message_kind_from_status_byte(
         // (low nibble encodes channel).
         build_byte_from_nibbles(high_status_byte_nibble, 0).try_into()
     }
+}
+
+fn extract_low_nibble_from_byte(value: u8) -> U4 {
+    U4(value & 0x0f)
 }
 
 fn extract_high_nibble_from_byte(byte: u8) -> u8 {

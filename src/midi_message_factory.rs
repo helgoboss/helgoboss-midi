@@ -1,7 +1,7 @@
 use crate::{
     build_status_byte, get_midi_message_kind_from_status_byte, Channel, ControllerNumber,
     KeyNumber, MidiMessage, MidiMessageKind, MidiMessageMainCategory, MidiMessageSuperKind,
-    ProgramNumber, StructuredMidiMessage, U14, U7,
+    MidiTimeCodeQuarterFrame, ProgramNumber, StructuredMidiMessage, U14, U4, U7,
 };
 
 /// Trait to be implemented by struct representing a MIDI message if it supports creation of various
@@ -42,7 +42,11 @@ pub trait MidiMessageFactory: Sized {
         }
     }
 
-    // TODO Create factory methods for system-common and system-exclusive messages
+    fn system_common_message(kind: MidiMessageKind, data_1: U7, data_2: U7) -> Self {
+        assert_eq!(kind.get_super_kind(), MidiMessageSuperKind::SystemCommon);
+        unsafe { Self::from_bytes_unchecked(kind.into(), data_1, data_2) }
+    }
+
     fn system_real_time_message(kind: MidiMessageKind) -> Self {
         assert_eq!(kind.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
         unsafe { Self::from_bytes_unchecked(kind.into(), U7::MIN, U7::MIN) }
@@ -124,23 +128,75 @@ pub trait MidiMessageFactory: Sized {
             )
         }
     }
+
+    fn system_exclusive_start() -> Self {
+        unsafe {
+            Self::from_bytes_unchecked(
+                MidiMessageKind::SystemExclusiveStart.into(),
+                U7::MIN,
+                U7::MIN,
+            )
+        }
+    }
+
+    fn midi_time_code_quarter_frame(frame: MidiTimeCodeQuarterFrame) -> Self {
+        unsafe {
+            Self::from_bytes_unchecked(
+                MidiMessageKind::MidiTimeCodeQuarterFrame.into(),
+                frame.into(),
+                U7::MIN,
+            )
+        }
+    }
+
+    fn song_position_pointer(position: U14) -> Self {
+        unsafe {
+            Self::from_bytes_unchecked(
+                MidiMessageKind::SongPositionPointer.into(),
+                U7((u16::from(position) & 0x7f) as u8),
+                U7((u16::from(position) >> 7) as u8),
+            )
+        }
+    }
+
+    fn song_select(song_number: U7) -> Self {
+        unsafe {
+            Self::from_bytes_unchecked(MidiMessageKind::SongSelect.into(), song_number, U7::MIN)
+        }
+    }
+
+    fn tune_request() -> Self {
+        unsafe { Self::from_bytes_unchecked(MidiMessageKind::TuneRequest.into(), U7::MIN, U7::MIN) }
+    }
+
+    fn system_exclusive_end() -> Self {
+        unsafe {
+            Self::from_bytes_unchecked(MidiMessageKind::SystemExclusiveEnd.into(), U7::MIN, U7::MIN)
+        }
+    }
+
     fn timing_clock() -> Self {
         unsafe { Self::from_bytes_unchecked(MidiMessageKind::TimingClock.into(), U7::MIN, U7::MIN) }
     }
+
     fn start() -> Self {
         unsafe { Self::from_bytes_unchecked(MidiMessageKind::Start.into(), U7::MIN, U7::MIN) }
     }
+
     fn r#continue() -> Self {
         unsafe { Self::from_bytes_unchecked(MidiMessageKind::Continue.into(), U7::MIN, U7::MIN) }
     }
+
     fn stop() -> Self {
         unsafe { Self::from_bytes_unchecked(MidiMessageKind::Stop.into(), U7::MIN, U7::MIN) }
     }
+
     fn active_sensing() -> Self {
         unsafe {
             Self::from_bytes_unchecked(MidiMessageKind::ActiveSensing.into(), U7::MIN, U7::MIN)
         }
     }
+
     fn system_reset() -> Self {
         unsafe { Self::from_bytes_unchecked(MidiMessageKind::SystemReset.into(), U7::MIN, U7::MIN) }
     }
