@@ -30,7 +30,6 @@ impl From<Channel> for usize {
     }
 }
 
-// TODO Maybe rename to channel. Can always be renamed to shorter version on import!
-pub fn ch(number: u8) -> Channel {
+pub fn channel(number: u8) -> Channel {
     Channel::new(number)
 }

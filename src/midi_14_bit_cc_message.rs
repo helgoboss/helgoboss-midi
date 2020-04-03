@@ -1,6 +1,6 @@
 use crate::{
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, u14,
-    Channel, MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage, U14,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
+    MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage, U14,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -68,7 +68,7 @@ pub fn could_be_part_of_14_bit_cc_message(msg: &impl MidiMessage) -> bool {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ch, RawMidiMessage};
+    use crate::{channel as ch, u14, RawMidiMessage};
 
     #[test]
     fn basics() {

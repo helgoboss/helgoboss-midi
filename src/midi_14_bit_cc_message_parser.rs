@@ -1,5 +1,5 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, u14, Channel, Midi14BitCcMessage, MidiMessage,
+    build_14_bit_value_from_two_7_bit_values, Channel, Midi14BitCcMessage, MidiMessage,
     SevenBitValue, StructuredMidiMessage,
 };
 
@@ -93,7 +93,7 @@ impl ParserForOneChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ch, MidiMessageFactory, RawMidiMessage};
+    use crate::{channel as ch, u14, MidiMessageFactory, RawMidiMessage};
 
     #[test]
     fn should_ignore_non_contributing_midi_messages() {

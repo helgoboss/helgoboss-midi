@@ -1,7 +1,7 @@
 use crate::{
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, u14,
-    Channel, MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage,
-    SEVEN_BIT_VALUE_MAX, U14,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
+    MidiMessage, MidiMessageFactory, SevenBitValue, StructuredMidiMessage, SEVEN_BIT_VALUE_MAX,
+    U14,
 };
 
 #[derive(Clone, Copy, Debug, PartialEq, Eq)]
@@ -154,7 +154,7 @@ pub fn ctrl_number_could_be_part_of_parameter_number_msg(controller_number: Seve
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ch, RawMidiMessage};
+    use crate::{channel as ch, u14, RawMidiMessage};
 
     #[test]
     fn fourteen_bit_parameter_number_messages() {

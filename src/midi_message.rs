@@ -1,7 +1,6 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, extract_high_7_bit_value_from_14_bit_value,
-    extract_low_7_bit_value_from_14_bit_value, u14, Channel, SevenBitValue, SEVEN_BIT_VALUE_MAX,
-    U14,
+    extract_low_7_bit_value_from_14_bit_value, Channel, SevenBitValue, SEVEN_BIT_VALUE_MAX, U14,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use std::convert::TryInto;
@@ -615,7 +614,7 @@ fn build_byte_from_nibbles(high_nibble: u8, low_nibble: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{ch, Channel};
+    use crate::{channel as ch, u14, Channel};
 
     #[test]
     fn from_bytes_ok() {
