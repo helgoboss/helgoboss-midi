@@ -554,7 +554,7 @@ impl MidiMessage for StructuredMidiMessage {
 }
 
 fn extract_channel_from_status_byte(byte: u8) -> Channel {
-    unsafe { Channel::new_unchecked(byte & 0x0f) }
+    Channel(byte & 0x0f)
 }
 
 #[derive(Clone, Debug, PartialEq, Eq)]

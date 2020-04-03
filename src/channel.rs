@@ -1,5 +1,5 @@
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct Channel(u8);
+pub struct Channel(pub(crate) u8);
 
 impl Channel {
     pub const MIN: Channel = Channel(0);
@@ -30,6 +30,7 @@ impl From<Channel> for usize {
     }
 }
 
+// TODO Maybe rename to channel. Can always be renamed to shorter version on import!
 pub fn ch(number: u8) -> Channel {
     Channel::new(number)
 }

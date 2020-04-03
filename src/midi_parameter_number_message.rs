@@ -56,7 +56,7 @@ impl MidiParameterNumberMessage {
         MidiParameterNumberMessage {
             channel,
             number,
-            value: unsafe { U14::new_unchecked(value as u16) },
+            value: U14(value as u16),
             is_registered,
             is_14_bit: false,
         }

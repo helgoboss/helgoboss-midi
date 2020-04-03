@@ -1,5 +1,7 @@
+use crate::U7;
+
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct U14(u16);
+pub struct U14(pub(crate) u16);
 
 impl U14 {
     pub const MIN: U14 = U14(0);
@@ -24,9 +26,15 @@ impl From<U14> for u16 {
     }
 }
 
+impl From<U7> for U14 {
+    fn from(value: U7) -> Self {
+        U14(value.into())
+    }
+}
+
 impl From<u8> for U14 {
     fn from(value: u8) -> Self {
-        unsafe { U14::new_unchecked(value as u16) }
+        U14(value as u16)
     }
 }
 

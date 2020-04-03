@@ -19,6 +19,15 @@ pub use types::*;
 mod channel;
 pub use channel::*;
 
+mod key_number;
+pub use key_number::*;
+
+mod controller_number;
+pub use controller_number::*;
+
+mod u7;
+pub use u7::*;
+
 mod u14;
 pub use u14::*;
 
