@@ -1,7 +1,7 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, extract_high_7_bit_value_from_14_bit_value,
     extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber, ProgramNumber,
-    U14, U7,
+    StructuredMidiMessage, U14, U7,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 use std::convert::TryInto;
@@ -177,152 +177,6 @@ pub trait MidiMessage {
     }
 }
 
-/// Trait to be implemented by struct representing a MIDI message if it supports creation of various
-/// types of MIDI messages. Only one method needs to be implemented, the rest is done by default
-/// methods. The advantage of this architecture is that we can have a unified factory API, no matter
-/// which underlying data structure is used.
-pub trait MidiMessageFactory: Sized {
-    unsafe fn from_bytes_unchecked(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Self;
-
-    // Although we could argue that calling this function with illegal input values is a violation
-    // of its contract, this function returns a result rather than panicking. It's because - unlike
-    // the convenience factory functions - this function is primarily intended to be used in
-    // situations where the bytes come from somewhere else (e.g. are user-generated) and therefore
-    // acts a bit like a parse function where client code should be able to recover from wrong
-    // input.
-    fn from_bytes(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Result<Self, &'static str> {
-        get_midi_message_kind_from_status_byte(status_byte).map_err(|_| "Unknown status byte")?;
-        Ok(unsafe { Self::from_bytes_unchecked(status_byte, data_byte_1, data_byte_2) })
-    }
-
-    fn from_structured(msg: &StructuredMidiMessage) -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(
-                msg.get_status_byte(),
-                msg.get_data_byte_1(),
-                msg.get_data_byte_2(),
-            )
-        }
-    }
-
-    fn channel_message(kind: MidiMessageKind, channel: Channel, data_1: U7, data_2: U7) -> Self {
-        assert_eq!(
-            kind.get_super_kind().get_main_category(),
-            MidiMessageMainCategory::Channel
-        );
-        unsafe {
-            Self::from_bytes_unchecked(build_status_byte(kind.into(), channel), data_1, data_2)
-        }
-    }
-
-    // TODO Create factory methods for system-common and system-exclusive messages
-    fn system_real_time_message(kind: MidiMessageKind) -> Self {
-        assert_eq!(kind.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
-        unsafe { Self::from_bytes_unchecked(kind.into(), U7::MIN, U7::MIN) }
-    }
-
-    fn note_on(channel: Channel, key_number: KeyNumber, velocity: U7) -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(
-                build_status_byte(MidiMessageKind::NoteOn.into(), channel),
-                key_number.into(),
-                velocity,
-            )
-        }
-    }
-
-    fn note_off(channel: Channel, key_number: KeyNumber, velocity: U7) -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(
-                build_status_byte(MidiMessageKind::NoteOff.into(), channel),
-                key_number.into(),
-                velocity,
-            )
-        }
-    }
-
-    fn control_change(
-        channel: Channel,
-        controller_number: ControllerNumber,
-        control_value: U7,
-    ) -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(
-                build_status_byte(MidiMessageKind::ControlChange.into(), channel),
-                controller_number.into(),
-                control_value,
-            )
-        }
-    }
-
-    fn program_change(channel: Channel, program_number: ProgramNumber) -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(
-                build_status_byte(MidiMessageKind::ProgramChange.into(), channel),
-                program_number.into(),
-                U7::MIN,
-            )
-        }
-    }
-
-    fn polyphonic_key_pressure(
-        channel: Channel,
-        key_number: KeyNumber,
-        pressure_amount: U7,
-    ) -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(
-                build_status_byte(MidiMessageKind::PolyphonicKeyPressure.into(), channel),
-                key_number.into(),
-                pressure_amount,
-            )
-        }
-    }
-
-    fn channel_pressure(channel: Channel, pressure_amount: U7) -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(
-                build_status_byte(MidiMessageKind::ChannelPressure.into(), channel),
-                pressure_amount,
-                U7::MIN,
-            )
-        }
-    }
-    fn pitch_bend_change(channel: Channel, pitch_bend_value: U14) -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(
-                build_status_byte(MidiMessageKind::PitchBendChange.into(), channel),
-                U7((u16::from(pitch_bend_value) & 0x7f) as u8),
-                U7((u16::from(pitch_bend_value) >> 7) as u8),
-            )
-        }
-    }
-    fn timing_clock() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageKind::TimingClock.into(), U7::MIN, U7::MIN) }
-    }
-    fn start() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageKind::Start.into(), U7::MIN, U7::MIN) }
-    }
-    fn r#continue() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageKind::Continue.into(), U7::MIN, U7::MIN) }
-    }
-    fn stop() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageKind::Stop.into(), U7::MIN, U7::MIN) }
-    }
-    fn active_sensing() -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(MidiMessageKind::ActiveSensing.into(), U7::MIN, U7::MIN)
-        }
-    }
-    fn system_reset() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageKind::SystemReset.into(), U7::MIN, U7::MIN) }
-    }
-}
-
-fn build_status_byte(kind_byte: u8, channel: Channel) -> u8 {
-    kind_byte | u8::from(channel)
-}
-
 // The most low-level kind of a MIDI message
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive, EnumIter)]
 #[repr(u8)]
@@ -406,190 +260,11 @@ pub enum MidiMessageMainCategory {
     System,
 }
 
-/// MIDI message implemented as an enum where each variant contains exactly the data which is
-/// relevant for the particular MIDI message kind. This enum is primarily intended for read-only
-/// usage via pattern matching. For that reason each variant is a struct-like enum, which is ideal
-/// for pattern matching while it is less ideal for reuse (the data contained in the variant can't
-/// be passed around in one piece).
-#[derive(Clone, Debug, Eq, PartialEq)]
-pub enum StructuredMidiMessage {
-    // Channel messages
-    NoteOff {
-        channel: Channel,
-        key_number: KeyNumber,
-        velocity: U7,
-    },
-    NoteOn {
-        channel: Channel,
-        key_number: KeyNumber,
-        velocity: U7,
-    },
-    PolyphonicKeyPressure {
-        channel: Channel,
-        key_number: KeyNumber,
-        pressure_amount: U7,
-    },
-    ControlChange {
-        channel: Channel,
-        controller_number: ControllerNumber,
-        control_value: U7,
-    },
-    ProgramChange {
-        channel: Channel,
-        program_number: ProgramNumber,
-    },
-    ChannelPressure {
-        channel: Channel,
-        pressure_amount: U7,
-    },
-    PitchBendChange {
-        channel: Channel,
-        pitch_bend_value: U14,
-    },
-    // System exclusive messages
-    SystemExclusiveStart,
-    // System common messages
-    MidiTimeCodeQuarterFrame,
-    SongPositionPointer,
-    SongSelect,
-    TuneRequest,
-    SystemExclusiveEnd,
-    // System real-time messages
-    TimingClock,
-    Start,
-    Continue,
-    Stop,
-    ActiveSensing,
-    SystemReset,
-}
-
-impl MidiMessageFactory for StructuredMidiMessage {
-    unsafe fn from_bytes_unchecked(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Self {
-        RawMidiMessage::from_bytes_unchecked(status_byte, data_byte_1, data_byte_2).to_structured()
-    }
-
-    // Optimization (although probably not used anyway)
-    fn from_structured(msg: &StructuredMidiMessage) -> Self {
-        msg.clone()
-    }
-}
-
-impl MidiMessage for StructuredMidiMessage {
-    fn get_status_byte(&self) -> u8 {
-        use StructuredMidiMessage::*;
-        match self {
-            NoteOff { channel, .. } => build_status_byte(MidiMessageKind::NoteOff.into(), *channel),
-            NoteOn { channel, .. } => build_status_byte(MidiMessageKind::NoteOn.into(), *channel),
-            PolyphonicKeyPressure { channel, .. } => {
-                build_status_byte(MidiMessageKind::PolyphonicKeyPressure.into(), *channel)
-            }
-            ControlChange { channel, .. } => {
-                build_status_byte(MidiMessageKind::ControlChange.into(), *channel)
-            }
-            ProgramChange { channel, .. } => {
-                build_status_byte(MidiMessageKind::ProgramChange.into(), *channel)
-            }
-            ChannelPressure { channel, .. } => {
-                build_status_byte(MidiMessageKind::ChannelPressure.into(), *channel)
-            }
-            PitchBendChange { channel, .. } => {
-                build_status_byte(MidiMessageKind::PitchBendChange.into(), *channel)
-            }
-            SystemExclusiveStart => MidiMessageKind::SystemExclusiveStart.into(),
-            MidiTimeCodeQuarterFrame => MidiMessageKind::MidiTimeCodeQuarterFrame.into(),
-            SongPositionPointer => MidiMessageKind::SongPositionPointer.into(),
-            SongSelect => MidiMessageKind::SongSelect.into(),
-            TuneRequest => MidiMessageKind::TuneRequest.into(),
-            SystemExclusiveEnd => MidiMessageKind::SystemExclusiveEnd.into(),
-            TimingClock => MidiMessageKind::TimingClock.into(),
-            Start => MidiMessageKind::Start.into(),
-            Continue => MidiMessageKind::Continue.into(),
-            Stop => MidiMessageKind::Stop.into(),
-            ActiveSensing => MidiMessageKind::ActiveSensing.into(),
-            SystemReset => MidiMessageKind::SystemReset.into(),
-        }
-    }
-
-    fn get_data_byte_1(&self) -> U7 {
-        use StructuredMidiMessage::*;
-        match self {
-            NoteOff { key_number, .. } => (*key_number).into(),
-            NoteOn { key_number, .. } => (*key_number).into(),
-            PolyphonicKeyPressure { key_number, .. } => (*key_number).into(),
-            ControlChange {
-                controller_number, ..
-            } => (*controller_number).into(),
-            ProgramChange { program_number, .. } => (*program_number).into(),
-            ChannelPressure {
-                pressure_amount, ..
-            } => *pressure_amount,
-            PitchBendChange {
-                pitch_bend_value, ..
-            } => extract_low_7_bit_value_from_14_bit_value(*pitch_bend_value),
-            _ => U7::MIN,
-        }
-    }
-
-    fn get_data_byte_2(&self) -> U7 {
-        use StructuredMidiMessage::*;
-        match self {
-            NoteOff { velocity, .. } => *velocity,
-            NoteOn { velocity, .. } => *velocity,
-            PolyphonicKeyPressure {
-                pressure_amount, ..
-            } => *pressure_amount,
-            ControlChange { control_value, .. } => *control_value,
-            ProgramChange { .. } => U7::MIN,
-            ChannelPressure { .. } => U7::MIN,
-            PitchBendChange {
-                pitch_bend_value, ..
-            } => extract_high_7_bit_value_from_14_bit_value(*pitch_bend_value),
-            _ => U7::MIN,
-        }
-    }
-
-    // Optimization
-    fn to_structured(&self) -> StructuredMidiMessage {
-        self.clone()
-    }
-}
-
 fn extract_channel_from_status_byte(byte: u8) -> Channel {
     Channel(byte & 0x0f)
 }
 
-#[derive(Clone, Debug, PartialEq, Eq)]
-pub struct RawMidiMessage {
-    status_byte: u8,
-    data_byte_1: U7,
-    data_byte_2: U7,
-}
-
-impl MidiMessageFactory for RawMidiMessage {
-    unsafe fn from_bytes_unchecked(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Self {
-        Self {
-            status_byte,
-            data_byte_1,
-            data_byte_2,
-        }
-    }
-}
-
-impl MidiMessage for RawMidiMessage {
-    fn get_status_byte(&self) -> u8 {
-        self.status_byte
-    }
-
-    fn get_data_byte_1(&self) -> U7 {
-        self.data_byte_1
-    }
-
-    fn get_data_byte_2(&self) -> U7 {
-        self.data_byte_2
-    }
-}
-
-fn get_midi_message_kind_from_status_byte(
+pub(crate) fn get_midi_message_kind_from_status_byte(
     status_byte: u8,
 ) -> Result<MidiMessageKind, TryFromPrimitiveError<MidiMessageKind>> {
     let high_status_byte_nibble = extract_high_nibble_from_byte(status_byte);
@@ -616,7 +291,10 @@ fn build_byte_from_nibbles(high_nibble: u8, low_nibble: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{channel as ch, controller_number, key_number, program_number, u14, u7, Channel};
+    use crate::{
+        channel as ch, controller_number, key_number, program_number, u14, u7, Channel,
+        MidiMessageFactory, RawMidiMessage,
+    };
 
     #[test]
     fn from_bytes_ok() {

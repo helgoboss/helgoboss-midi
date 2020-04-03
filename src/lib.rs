@@ -1,6 +1,15 @@
 mod midi_message;
 pub use midi_message::*;
 
+mod midi_message_factory;
+pub use midi_message_factory::*;
+
+mod structured_midi_message;
+pub use structured_midi_message::*;
+
+mod raw_midi_message;
+pub use raw_midi_message::*;
+
 mod midi_control_change_14_bit_message;
 pub use midi_control_change_14_bit_message::*;
 
@@ -31,7 +40,7 @@ pub use u7::*;
 mod u14;
 pub use u14::*;
 
-mod util;
-pub(crate) use util::*;
+mod bit_util;
+pub(crate) use bit_util::*;
 
 pub mod test_util;
