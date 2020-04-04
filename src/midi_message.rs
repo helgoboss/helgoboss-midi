@@ -9,10 +9,10 @@ use std::convert::TryInto;
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
 
-/// Trait to be implemented by struct representing MIDI message. Only the three byte-returning
-/// methods need to be implemented, the rest is done by default methods. The advantage of this
-/// architecture is that we can have a unified API, no matter which underlying data structure is
-/// used.
+/// Trait to be implemented by struct representing a single primitive MIDI message. Only the three
+/// byte-returning methods need to be implemented, the rest is done by default methods. The
+/// advantage of this architecture is that we can have a unified API, no matter which underlying
+/// data structure is used.
 ///
 /// Please also implement the trait `MidiMessageFactory` for your struct if creating new MIDI
 /// messages programmatically should be supported.
