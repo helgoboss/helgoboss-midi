@@ -347,7 +347,7 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
                     time_code_kind: ((data & 0b0000110) >> 1).try_into().unwrap(),
                 }
             }
-            _ => panic!("Impossible"),
+            _ => unreachable!(),
         }
     }
 }

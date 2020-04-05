@@ -3,6 +3,7 @@ use crate::U7;
 #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
 pub struct ProgramNumber(pub(crate) u8);
 
+// TODO Why is this not just a U7?
 impl ProgramNumber {
     pub const MIN: ProgramNumber = ProgramNumber(0);
 
