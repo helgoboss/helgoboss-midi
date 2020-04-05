@@ -22,26 +22,26 @@ pub use midi_parameter_number_message::*;
 mod midi_parameter_number_message_parser;
 pub use midi_parameter_number_message_parser::*;
 
-mod channel;
-pub use channel::*;
+mod channel_mod;
+pub use channel_mod::*;
 
-mod key_number;
-pub use key_number::*;
+mod key_number_mod;
+pub use key_number_mod::*;
 
-mod controller_number;
-pub use controller_number::*;
+mod controller_number_mod;
+pub use controller_number_mod::*;
 
-mod program_number;
-pub use program_number::*;
+mod program_number_mod;
+pub use program_number_mod::*;
 
-mod u4;
-pub use u4::*;
+mod u4_mod;
+pub use u4_mod::*;
 
-mod u7;
-pub use u7::*;
+mod u7_mod;
+pub use u7_mod::*;
 
-mod u14;
-pub use u14::*;
+mod u14_mod;
+pub use u14_mod::*;
 
 mod bit_util;
 pub(crate) use bit_util::*;
