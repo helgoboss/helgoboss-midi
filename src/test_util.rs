@@ -1,6 +1,6 @@
 //! Convenience methods for creating messages with minimum boilerplate, intended to be used in tests
 use crate::{
-    channel as ch, controller_number as cn, key_number as kn, program_number as pn, u14, u7,
+    channel as ch, controller_number as cn, key_number as kn, u14, u7,
     MidiControlChange14BitMessage, MidiMessageFactory, MidiParameterNumberMessage,
     MidiTimeCodeQuarterFrame, RawMidiMessage, U14,
 };
@@ -20,7 +20,7 @@ pub fn control_change(channel: u8, controller_number: u8, control_value: u8) -> 
 }
 
 pub fn program_change(channel: u8, program_number: u8) -> Msg {
-    Msg::program_change(ch(channel), pn(program_number))
+    Msg::program_change(ch(channel), u7(program_number))
 }
 
 pub fn polyphonic_key_pressure(channel: u8, key_number: u8, pressure_amount: u8) -> Msg {

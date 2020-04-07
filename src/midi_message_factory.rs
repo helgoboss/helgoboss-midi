@@ -1,7 +1,7 @@
 use crate::{
     build_status_byte, get_midi_message_kind_from_status_byte, Channel, ControllerNumber,
     KeyNumber, MidiMessage, MidiMessageKind, MidiMessageMainCategory, MidiMessageSuperKind,
-    MidiTimeCodeQuarterFrame, ProgramNumber, StructuredMidiMessage, U14, U4, U7,
+    MidiTimeCodeQuarterFrame, StructuredMidiMessage, U14, U4, U7,
 };
 
 /// Trait to be implemented by struct representing a MIDI message if it supports creation of various
@@ -86,11 +86,11 @@ pub trait MidiMessageFactory: Sized {
         }
     }
 
-    fn program_change(channel: Channel, program_number: ProgramNumber) -> Self {
+    fn program_change(channel: Channel, program_number: U7) -> Self {
         unsafe {
             Self::from_bytes_unchecked(
                 build_status_byte(MidiMessageKind::ProgramChange.into(), channel),
-                program_number.into(),
+                program_number,
                 U7::MIN,
             )
         }

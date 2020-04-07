@@ -1,6 +1,6 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, extract_high_7_bit_value_from_14_bit_value,
-    extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber, ProgramNumber,
+    extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber,
     StructuredMidiMessage, U14, U4, U7,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
@@ -163,11 +163,11 @@ pub trait MidiMessage {
         Some(self.get_data_byte_2())
     }
 
-    fn get_program_number(&self) -> Option<ProgramNumber> {
+    fn get_program_number(&self) -> Option<U7> {
         if self.get_kind() != MidiMessageKind::ProgramChange {
             return None;
         }
-        Some(self.get_data_byte_1().into())
+        Some(self.get_data_byte_1())
     }
 
     fn get_pressure_amount(&self) -> Option<U7> {
@@ -398,8 +398,8 @@ fn build_byte_from_nibbles(high_nibble: u8, low_nibble: u8) -> u8 {
 mod tests {
     use super::*;
     use crate::{
-        channel as ch, controller_number, key_number, program_number, u14, u7, Channel,
-        MidiMessageFactory, RawMidiMessage,
+        channel as ch, controller_number, key_number, u14, u7, Channel, MidiMessageFactory,
+        RawMidiMessage,
     };
 
     #[test]
@@ -579,7 +579,7 @@ mod tests {
     #[test]
     fn program_change() {
         // Given
-        let msg = RawMidiMessage::program_change(ch(4), program_number(22));
+        let msg = RawMidiMessage::program_change(ch(4), u7(22));
         // When
         // Then
         assert_eq!(msg.get_status_byte(), 0xc4);
@@ -595,12 +595,12 @@ mod tests {
         assert_eq!(msg.get_control_value(), None);
         assert_eq!(msg.get_pitch_bend_value(), None);
         assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), Some(program_number(22)));
+        assert_eq!(msg.get_program_number(), Some(u7(22)));
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::ProgramChange {
                 channel: ch(4),
-                program_number: program_number(22),
+                program_number: u7(22),
             }
         );
         assert!(!msg.is_note());

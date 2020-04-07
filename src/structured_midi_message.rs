@@ -1,8 +1,7 @@
 use crate::{
     build_status_byte, extract_high_7_bit_value_from_14_bit_value,
     extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber, MidiMessage,
-    MidiMessageFactory, MidiMessageKind, MidiTimeCodeQuarterFrame, ProgramNumber, RawMidiMessage,
-    U14, U4, U7,
+    MidiMessageFactory, MidiMessageKind, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U4, U7,
 };
 
 /// MIDI message implemented as an enum where each variant contains exactly the data which is
@@ -35,7 +34,7 @@ pub enum StructuredMidiMessage {
     },
     ProgramChange {
         channel: Channel,
-        program_number: ProgramNumber,
+        program_number: U7,
     },
     ChannelPressure {
         channel: Channel,
