@@ -1,17 +1,39 @@
 // Basic newtype definition
 newtype!(ControllerNumber, u8, 127, controller_number);
 
-// Conversions between newtypes
+// From related newtype to this newtype and back
 impl_from_newtype_to_newtype!(ControllerNumber, crate::U7);
 impl_from_newtype_to_newtype!(crate::U7, ControllerNumber);
 
-// Conversions to primitives
-impl_from_newtype_to_primitive!(ControllerNumber, u8);
-impl_from_newtype_to_primitive!(ControllerNumber, i32);
-impl_from_newtype_to_primitive!(ControllerNumber, usize);
+// From lower primitives to this newtype
+// -
 
-// Conversions from primitives
+// From this newtype to higher primitives
+impl_from_newtype_to_primitive!(ControllerNumber, u8);
+impl_from_newtype_to_primitive!(ControllerNumber, i8);
+impl_from_newtype_to_primitive!(ControllerNumber, u16);
+impl_from_newtype_to_primitive!(ControllerNumber, i16);
+impl_from_newtype_to_primitive!(ControllerNumber, u32);
+impl_from_newtype_to_primitive!(ControllerNumber, i32);
+impl_from_newtype_to_primitive!(ControllerNumber, u64);
+impl_from_newtype_to_primitive!(ControllerNumber, i64);
+impl_from_newtype_to_primitive!(ControllerNumber, u128);
+impl_from_newtype_to_primitive!(ControllerNumber, i128);
+impl_from_newtype_to_primitive!(ControllerNumber, usize);
+impl_from_newtype_to_primitive!(ControllerNumber, isize);
+
+// TryFrom higher primitives to this newtype
+impl_try_from_primitive_to_newtype!(u8, ControllerNumber);
+impl_try_from_primitive_to_newtype!(u16, ControllerNumber);
+impl_try_from_primitive_to_newtype!(i16, ControllerNumber);
+impl_try_from_primitive_to_newtype!(u32, ControllerNumber);
 impl_try_from_primitive_to_newtype!(i32, ControllerNumber);
+impl_try_from_primitive_to_newtype!(u64, ControllerNumber);
+impl_try_from_primitive_to_newtype!(i64, ControllerNumber);
+impl_try_from_primitive_to_newtype!(u128, ControllerNumber);
+impl_try_from_primitive_to_newtype!(i128, ControllerNumber);
+impl_try_from_primitive_to_newtype!(usize, ControllerNumber);
+impl_try_from_primitive_to_newtype!(isize, ControllerNumber);
 
 impl ControllerNumber {
     pub const BANK_SELECT: ControllerNumber = ControllerNumber(0x00);

@@ -25,6 +25,7 @@ pub use midi_parameter_number_message::*;
 mod midi_parameter_number_message_parser;
 pub use midi_parameter_number_message_parser::*;
 
+// I added the _mod suffix because of intellij-rust issue 4992
 mod channel_mod;
 pub use channel_mod::*;
 

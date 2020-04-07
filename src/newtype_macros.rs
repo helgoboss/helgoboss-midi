@@ -70,8 +70,24 @@ macro_rules! impl_from_primitive_to_newtype {
     };
 }
 
-/// Creates a `TryFrom` trait implementation from a primitive type with a higher
-/// value range to a newtype.
+/// Creates a `TryFrom` trait implementation from a newtype with a higher value range to a newtype.
+macro_rules! impl_try_from_newtype_to_newtype {
+    ($from: ty, $into: ty) => {
+        impl std::convert::TryFrom<$from> for $into {
+            type Error = ();
+
+            fn try_from(value: $from) -> Result<Self, Self::Error> {
+                if !Self::is_valid(value.0) {
+                    return Err(());
+                }
+                Ok(Self(value.0 as _))
+            }
+        }
+    };
+}
+
+/// Creates a `TryFrom` trait implementation from a primitive type with a higher value range to a
+/// newtype.
 macro_rules! impl_try_from_primitive_to_newtype {
     ($from: ty, $into: ty) => {
         impl std::convert::TryFrom<$from> for $into {
