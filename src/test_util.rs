@@ -1,11 +1,39 @@
 //! Convenience methods for creating messages with minimum boilerplate, intended to be used in tests
 use crate::{
-    channel as ch, controller_number as cn, key_number as kn, u14, u7,
-    MidiControlChange14BitMessage, MidiMessageFactory, MidiParameterNumberMessage,
-    MidiTimeCodeQuarterFrame, RawMidiMessage, U14,
+    Channel, ControllerNumber, KeyNumber, MidiControlChange14BitMessage, MidiMessageFactory,
+    MidiParameterNumberMessage, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U4, U7,
 };
+use std::convert::TryInto;
 
 type Msg = RawMidiMessage;
+
+use channel as ch;
+use controller_number as cn;
+use key_number as kn;
+
+pub fn u4(value: u8) -> U4 {
+    value.try_into().unwrap()
+}
+
+pub fn u7(value: u8) -> U7 {
+    value.try_into().unwrap()
+}
+
+pub fn u14(value: u16) -> U14 {
+    value.try_into().unwrap()
+}
+
+pub fn channel(value: u8) -> Channel {
+    value.try_into().unwrap()
+}
+
+pub fn key_number(value: u8) -> KeyNumber {
+    value.try_into().unwrap()
+}
+
+pub fn controller_number(value: u8) -> ControllerNumber {
+    value.try_into().unwrap()
+}
 
 pub fn note_on(channel: u8, key_number: u8, velocity: u8) -> Msg {
     Msg::note_on(ch(channel), kn(key_number), u7(velocity))

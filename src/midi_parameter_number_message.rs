@@ -147,7 +147,8 @@ impl MidiParameterNumberMessage {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{channel as ch, controller_number as cn, u14, u7, RawMidiMessage};
+    use crate::test_util::{channel as ch, controller_number as cn, u14, u7};
+    use crate::RawMidiMessage;
 
     #[test]
     fn parameter_number_messages_14_bit() {

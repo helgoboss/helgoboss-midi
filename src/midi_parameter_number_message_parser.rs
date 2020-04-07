@@ -137,10 +137,8 @@ impl ParserForOneChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        channel as ch, controller_number as cn, key_number, u14, u7, MidiMessageFactory,
-        RawMidiMessage,
-    };
+    use crate::test_util::{channel as ch, controller_number as cn, key_number, u14, u7};
+    use crate::{MidiMessageFactory, RawMidiMessage};
 
     #[test]
     fn should_ignore_non_contributing_midi_messages() {

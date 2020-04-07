@@ -397,10 +397,8 @@ fn build_byte_from_nibbles(high_nibble: u8, low_nibble: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{
-        channel as ch, controller_number, key_number, u14, u7, Channel, MidiMessageFactory,
-        RawMidiMessage,
-    };
+    use crate::test_util::{channel as ch, controller_number, key_number, u14, u7};
+    use crate::{Channel, MidiMessageFactory, RawMidiMessage};
 
     #[test]
     fn from_bytes_ok() {

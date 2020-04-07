@@ -16,8 +16,8 @@ macro_rules! newtype {
             }
 
             /// Panics if given number is greater than MAX!
-            // TODO Not sure if this is a good idea. See
-            //  https://doc.rust-lang.org/std/num/struct.NonZeroU8.html
+            // TODO Not sure if this is a good idea. NonZeroU8 has a constructor which returns an
+            //  Option instead. And even this is probably obsolete because we have TryFrom.
             pub fn new(number: $repr) -> Self {
                 assert!(Self::is_valid(number));
                 Self(number)
@@ -26,11 +26,6 @@ macro_rules! newtype {
             pub const unsafe fn new_unchecked(number: $repr) -> Self {
                 Self(number)
             }
-        }
-
-        /// Panics if given number is greater than MAX!
-        pub fn $factory(number: $repr) -> $name {
-            $name::new(number)
         }
     };
 }
