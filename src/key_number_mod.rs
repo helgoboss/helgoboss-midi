@@ -1,49 +1,14 @@
-use crate::U7;
+// Basic newtype definition
+newtype!(KeyNumber, u8, 127, key_number);
 
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct KeyNumber(pub(crate) u8);
+// Conversions between newtypes
+impl_from_newtype_to_newtype!(KeyNumber, crate::U7);
+impl_from_newtype_to_newtype!(crate::U7, KeyNumber);
 
-impl KeyNumber {
-    pub const MIN: KeyNumber = KeyNumber(0);
+// Conversions to primitives
+impl_from_newtype_to_primitive!(KeyNumber, u8);
+impl_from_newtype_to_primitive!(KeyNumber, i32);
+impl_from_newtype_to_primitive!(KeyNumber, usize);
 
-    pub const MAX: KeyNumber = KeyNumber(127);
-
-    pub const COUNT: u8 = 128;
-
-    pub fn new(number: u8) -> KeyNumber {
-        assert!(number < KeyNumber::COUNT);
-        KeyNumber(number)
-    }
-
-    pub const unsafe fn new_unchecked(number: u8) -> KeyNumber {
-        KeyNumber(number)
-    }
-}
-
-impl From<U7> for KeyNumber {
-    fn from(value: U7) -> Self {
-        KeyNumber(value.into())
-    }
-}
-
-impl From<KeyNumber> for U7 {
-    fn from(value: KeyNumber) -> Self {
-        U7(value.into())
-    }
-}
-
-impl From<KeyNumber> for u8 {
-    fn from(value: KeyNumber) -> Self {
-        value.0
-    }
-}
-
-impl From<KeyNumber> for usize {
-    fn from(value: KeyNumber) -> Self {
-        value.0 as usize
-    }
-}
-
-pub fn key_number(number: u8) -> KeyNumber {
-    KeyNumber::new(number)
-}
+// Conversions from primitives
+impl_try_from_primitive_to_newtype!(i32, KeyNumber);

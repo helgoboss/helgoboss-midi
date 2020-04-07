@@ -1,49 +1,15 @@
-use crate::U7;
+// Basic newtype definition
+newtype!(U14, u16, 16383, u14);
 
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct U14(pub(crate) u16);
+// Conversions between newtypes
+impl_from_newtype_to_newtype!(crate::U7, U14);
 
-impl U14 {
-    pub const MIN: U14 = U14(0);
+// Conversions to primitives
+impl_from_newtype_to_primitive!(U14, u8);
+impl_from_newtype_to_primitive!(U14, u16);
+impl_from_newtype_to_primitive!(U14, i32);
+impl_from_newtype_to_primitive!(U14, usize);
 
-    pub const MAX: U14 = U14(16383);
-
-    pub const COUNT: u16 = 16384;
-
-    pub fn new(number: u16) -> U14 {
-        assert!(number < U14::COUNT);
-        U14(number)
-    }
-
-    pub const unsafe fn new_unchecked(number: u16) -> U14 {
-        U14(number)
-    }
-}
-
-impl From<U14> for u16 {
-    fn from(value: U14) -> Self {
-        value.0
-    }
-}
-
-impl From<U7> for U14 {
-    fn from(value: U7) -> Self {
-        U14(value.into())
-    }
-}
-
-impl From<u8> for U14 {
-    fn from(value: u8) -> Self {
-        U14(value as u16)
-    }
-}
-
-impl From<U14> for usize {
-    fn from(value: U14) -> Self {
-        value.0 as usize
-    }
-}
-
-pub fn u14(number: u16) -> U14 {
-    U14::new(number)
-}
+// Conversions from primitives
+impl_from_primitive_to_newtype!(u8, U14);
+impl_try_from_primitive_to_newtype!(i32, U14);

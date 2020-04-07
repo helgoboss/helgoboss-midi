@@ -1,7 +1,17 @@
-use crate::U7;
+// Basic newtype definition
+newtype!(ControllerNumber, u8, 127, controller_number);
 
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct ControllerNumber(pub(crate) u8);
+// Conversions between newtypes
+impl_from_newtype_to_newtype!(ControllerNumber, crate::U7);
+impl_from_newtype_to_newtype!(crate::U7, ControllerNumber);
+
+// Conversions to primitives
+impl_from_newtype_to_primitive!(ControllerNumber, u8);
+impl_from_newtype_to_primitive!(ControllerNumber, i32);
+impl_from_newtype_to_primitive!(ControllerNumber, usize);
+
+// Conversions from primitives
+impl_try_from_primitive_to_newtype!(i32, ControllerNumber);
 
 impl ControllerNumber {
     pub const BANK_SELECT: ControllerNumber = ControllerNumber(0x00);
@@ -78,17 +88,6 @@ impl ControllerNumber {
     pub const MONO_MODE_ON: ControllerNumber = ControllerNumber(0x7E);
     pub const POLY_MODE_ON: ControllerNumber = ControllerNumber(0x7F);
 
-    pub const COUNT: u8 = 128;
-
-    pub fn new(number: u8) -> ControllerNumber {
-        assert!(number < ControllerNumber::COUNT);
-        ControllerNumber(number)
-    }
-
-    pub const unsafe fn new_unchecked(number: u8) -> ControllerNumber {
-        ControllerNumber(number)
-    }
-
     pub fn can_be_part_of_14_bit_message(&self) -> bool {
         self.0 < 64
     }
@@ -107,32 +106,4 @@ impl ControllerNumber {
     pub fn can_be_part_of_parameter_number_message(&self) -> bool {
         matches!(self.0, 98 | 99 | 100 | 101 | 38 | 6)
     }
-}
-
-impl From<U7> for ControllerNumber {
-    fn from(value: U7) -> Self {
-        ControllerNumber(value.into())
-    }
-}
-
-impl From<ControllerNumber> for U7 {
-    fn from(value: ControllerNumber) -> Self {
-        U7(value.into())
-    }
-}
-
-impl From<ControllerNumber> for u8 {
-    fn from(value: ControllerNumber) -> Self {
-        value.0
-    }
-}
-
-impl From<ControllerNumber> for usize {
-    fn from(value: ControllerNumber) -> Self {
-        value.0 as usize
-    }
-}
-
-pub fn controller_number(number: u8) -> ControllerNumber {
-    ControllerNumber::new(number)
 }

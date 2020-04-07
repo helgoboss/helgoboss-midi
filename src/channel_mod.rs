@@ -1,49 +1,14 @@
-use crate::U4;
+// Basic newtype definition
+newtype!(Channel, u8, 15, channel);
 
-#[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
-pub struct Channel(pub(crate) u8);
+// Conversions between newtypes
+impl_from_newtype_to_newtype!(Channel, crate::U4);
+impl_from_newtype_to_newtype!(crate::U4, Channel);
 
-impl Channel {
-    pub const MIN: Channel = Channel(0);
+// Conversions to primitives
+impl_from_newtype_to_primitive!(Channel, u8);
+impl_from_newtype_to_primitive!(Channel, i32);
+impl_from_newtype_to_primitive!(Channel, usize);
 
-    pub const MAX: Channel = Channel(15);
-
-    pub const COUNT: u8 = 16;
-
-    pub fn new(number: u8) -> Channel {
-        assert!(number < Channel::COUNT);
-        Channel(number)
-    }
-
-    pub const unsafe fn new_unchecked(number: u8) -> Channel {
-        Channel(number)
-    }
-}
-
-impl From<U4> for Channel {
-    fn from(value: U4) -> Self {
-        Channel(value.into())
-    }
-}
-
-impl From<Channel> for U4 {
-    fn from(value: Channel) -> Self {
-        U4(value.into())
-    }
-}
-
-impl From<Channel> for u8 {
-    fn from(value: Channel) -> Self {
-        value.0
-    }
-}
-
-impl From<Channel> for usize {
-    fn from(value: Channel) -> Self {
-        value.0 as usize
-    }
-}
-
-pub fn channel(number: u8) -> Channel {
-    Channel::new(number)
-}
+// Conversions from primitives
+impl_try_from_primitive_to_newtype!(i32, Channel);
