@@ -23,21 +23,21 @@ pub trait MidiMessage {
 
     fn get_data_byte_2(&self) -> U7;
 
-    fn get_kind(&self) -> MidiMessageKind {
-        get_midi_message_kind_from_status_byte(self.get_status_byte()).unwrap()
+    fn get_type(&self) -> MidiMessageType {
+        get_midi_message_type_from_status_byte(self.get_status_byte()).unwrap()
     }
 
-    fn get_super_kind(&self) -> MidiMessageSuperKind {
-        self.get_kind().get_super_kind()
+    fn get_super_type(&self) -> MidiMessageSuperType {
+        self.get_type().get_super_type()
     }
 
     fn get_main_category(&self) -> MidiMessageMainCategory {
-        self.get_super_kind().get_main_category()
+        self.get_super_type().get_main_category()
     }
 
     fn to_structured(&self) -> StructuredMidiMessage {
-        use MidiMessageKind::*;
-        match self.get_kind() {
+        use MidiMessageType::*;
+        match self.get_type() {
             NoteOff => StructuredMidiMessage::NoteOff {
                 channel: extract_channel_from_status_byte(self.get_status_byte()),
                 key_number: self.get_data_byte_1().into(),
@@ -101,7 +101,7 @@ pub trait MidiMessage {
         }
     }
 
-    // Returns false if the message kind is NoteOn but the velocity is 0
+    // Returns false if the message type is NoteOn but the velocity is 0
     fn is_note_on(&self) -> bool {
         match self.to_structured() {
             StructuredMidiMessage::NoteOn { velocity, .. } => velocity > U7::MIN,
@@ -109,7 +109,7 @@ pub trait MidiMessage {
         }
     }
 
-    // Also returns true if the message kind is NoteOn but the velocity is 0
+    // Also returns true if the message type is NoteOn but the velocity is 0
     fn is_note_off(&self) -> bool {
         use StructuredMidiMessage::*;
         match self.to_structured() {
@@ -120,8 +120,8 @@ pub trait MidiMessage {
     }
 
     fn is_note(&self) -> bool {
-        match self.get_kind() {
-            MidiMessageKind::NoteOn | MidiMessageKind::NoteOff => true,
+        match self.get_type() {
+            MidiMessageType::NoteOn | MidiMessageType::NoteOff => true,
             _ => false,
         }
     }
@@ -134,45 +134,45 @@ pub trait MidiMessage {
     }
 
     fn get_key_number(&self) -> Option<KeyNumber> {
-        use MidiMessageKind::*;
-        match self.get_kind() {
+        use MidiMessageType::*;
+        match self.get_type() {
             NoteOff | NoteOn | PolyphonicKeyPressure => Some(self.get_data_byte_1().into()),
             _ => None,
         }
     }
 
     fn get_velocity(&self) -> Option<U7> {
-        use MidiMessageKind::*;
-        match self.get_kind() {
+        use MidiMessageType::*;
+        match self.get_type() {
             NoteOff | NoteOn => Some(self.get_data_byte_2()),
             _ => None,
         }
     }
 
     fn get_controller_number(&self) -> Option<ControllerNumber> {
-        if self.get_kind() != MidiMessageKind::ControlChange {
+        if self.get_type() != MidiMessageType::ControlChange {
             return None;
         }
         Some(self.get_data_byte_1().into())
     }
 
     fn get_control_value(&self) -> Option<U7> {
-        if self.get_kind() != MidiMessageKind::ControlChange {
+        if self.get_type() != MidiMessageType::ControlChange {
             return None;
         }
         Some(self.get_data_byte_2())
     }
 
     fn get_program_number(&self) -> Option<U7> {
-        if self.get_kind() != MidiMessageKind::ProgramChange {
+        if self.get_type() != MidiMessageType::ProgramChange {
             return None;
         }
         Some(self.get_data_byte_1())
     }
 
     fn get_pressure_amount(&self) -> Option<U7> {
-        use MidiMessageKind::*;
-        match self.get_kind() {
+        use MidiMessageType::*;
+        match self.get_type() {
             PolyphonicKeyPressure => Some(self.get_data_byte_2()),
             ChannelPressure => Some(self.get_data_byte_1()),
             _ => None,
@@ -180,7 +180,7 @@ pub trait MidiMessage {
     }
 
     fn get_pitch_bend_value(&self) -> Option<U14> {
-        if self.get_kind() != MidiMessageKind::PitchBendChange {
+        if self.get_type() != MidiMessageType::PitchBendChange {
             return None;
         }
         Some(build_14_bit_value_from_two_7_bit_values(
@@ -190,11 +190,11 @@ pub trait MidiMessage {
     }
 }
 
-// The most low-level kind of a MIDI message
+// The most low-level type of a MIDI message
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive, EnumIter)]
 #[repr(u8)]
 // TODO Page 35 of MIDI spec PDF contains good classification
-pub enum MidiMessageKind {
+pub enum MidiMessageType {
     // Channel messages = channel voice messages + channel mode messages (given value represents
     // channel 0 status byte)
     NoteOff = 0x80,
@@ -225,9 +225,9 @@ pub enum MidiMessageKind {
     SystemReset = 0xFF,
 }
 
-impl MidiMessageKind {
-    pub fn get_super_kind(&self) -> MidiMessageSuperKind {
-        use MidiMessageKind::*;
+impl MidiMessageType {
+    pub fn get_super_type(&self) -> MidiMessageSuperType {
+        use MidiMessageType::*;
         match self {
             NoteOn
             | NoteOff
@@ -235,7 +235,7 @@ impl MidiMessageKind {
             | PolyphonicKeyPressure
             | PitchBendChange
             | ProgramChange
-            | ControlChange => MidiMessageSuperKind::Channel,
+            | ControlChange => MidiMessageSuperType::Channel,
             TimingClock
             | SystemRealTimeUndefined1
             | Start
@@ -243,34 +243,35 @@ impl MidiMessageKind {
             | Stop
             | SystemRealTimeUndefined2
             | ActiveSensing
-            | SystemReset => MidiMessageSuperKind::SystemRealTime,
+            | SystemReset => MidiMessageSuperType::SystemRealTime,
             MidiTimeCodeQuarterFrame
             | SongPositionPointer
             | SongSelect
             | SystemCommonUndefined1
             | SystemCommonUndefined2
             | TuneRequest
-            | SystemExclusiveEnd => MidiMessageSuperKind::SystemCommon,
-            SystemExclusiveStart => MidiMessageSuperKind::SystemExclusive,
+            | SystemExclusiveEnd => MidiMessageSuperType::SystemCommon,
+            SystemExclusiveStart => MidiMessageSuperType::SystemExclusive,
         }
     }
 }
 
-// A somewhat mid-level kind of a MIDI message.
+// A somewhat mid-level type of a MIDI message.
 // In this enum we don't distinguish between channel voice and channel mode messages because this
-// difference doesn't solely depend on the MidiMessageKind (channel mode messages are just
+// difference doesn't solely depend on the MidiMessageType (channel mode messages are just
 // particular ControlChange messages).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum MidiMessageSuperKind {
+pub enum MidiMessageSuperType {
+    // TODO Distinguish between ChannelMode and ChannelVoice
     Channel,
     SystemCommon,
     SystemRealTime,
     SystemExclusive,
 }
 
-impl MidiMessageSuperKind {
+impl MidiMessageSuperType {
     pub fn get_main_category(&self) -> MidiMessageMainCategory {
-        if *self == MidiMessageSuperKind::Channel {
+        if *self == MidiMessageSuperType::Channel {
             MidiMessageMainCategory::Channel
         } else {
             MidiMessageMainCategory::System
@@ -278,7 +279,7 @@ impl MidiMessageSuperKind {
     }
 }
 
-// At the highest level MIDI messages are put into two categories
+// The MIDI spec says: "Messages are divided into two main categories: Channel and System."
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
 pub enum MidiMessageMainCategory {
     Channel,
@@ -297,7 +298,7 @@ pub enum MidiTimeCodeQuarterFrame {
     HoursCountLsNibble(U4),
     Last {
         hours_count_ms_bit: bool,
-        time_code_kind: TimeCodeKind,
+        time_code_type: TimeCodeType,
     },
 }
 
@@ -314,18 +315,18 @@ impl From<MidiTimeCodeQuarterFrame> for U7 {
             HoursCountLsNibble(v) => build_mtc_quarter_frame_data_byte(6, v),
             Last {
                 hours_count_ms_bit,
-                time_code_kind,
+                time_code_type,
             } => {
                 let bit_0 = hours_count_ms_bit as u8;
-                let bit_1_and_2 = u8::from(time_code_kind) << 1;
+                let bit_1_and_2 = u8::from(time_code_type) << 1;
                 build_mtc_quarter_frame_data_byte(7, U4(bit_1_and_2 | bit_0))
             }
         }
     }
 }
 
-fn build_mtc_quarter_frame_data_byte(kind: u8, data: U4) -> U7 {
-    U7((kind << 4) | u8::from(data))
+fn build_mtc_quarter_frame_data_byte(frame_type: u8, data: U4) -> U7 {
+    U7((frame_type << 4) | u8::from(data))
 }
 
 impl From<U7> for MidiTimeCodeQuarterFrame {
@@ -341,10 +342,10 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
             5 => MinutesCountMsNibble(extract_low_nibble_from_byte(data)),
             6 => HoursCountLsNibble(extract_low_nibble_from_byte(data)),
             7 => {
-                use TimeCodeKind::*;
+                use TimeCodeType::*;
                 Last {
                     hours_count_ms_bit: (data & 0b0000001) != 0,
-                    time_code_kind: ((data & 0b0000110) >> 1).try_into().unwrap(),
+                    time_code_type: ((data & 0b0000110) >> 1).try_into().unwrap(),
                 }
             }
             _ => unreachable!(),
@@ -352,10 +353,10 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
     }
 }
 
-/// Time code kind contained in the last quarter frame message
+/// Time code type contained in the last quarter frame message
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive)]
 #[repr(u8)]
-pub enum TimeCodeKind {
+pub enum TimeCodeType {
     Fps24 = 0,
     Fps25 = 1,
     Fps30DropFrame = 2,
@@ -366,15 +367,15 @@ fn extract_channel_from_status_byte(byte: u8) -> Channel {
     Channel(byte & 0x0f)
 }
 
-pub(crate) fn get_midi_message_kind_from_status_byte(
+pub(crate) fn get_midi_message_type_from_status_byte(
     status_byte: u8,
-) -> Result<MidiMessageKind, TryFromPrimitiveError<MidiMessageKind>> {
+) -> Result<MidiMessageType, TryFromPrimitiveError<MidiMessageType>> {
     let high_status_byte_nibble = extract_high_nibble_from_byte(status_byte);
     if high_status_byte_nibble == 0xf {
-        // System message. The complete status byte makes up the kind.
+        // System message. The complete status byte makes up the type.
         status_byte.try_into()
     } else {
-        // Channel message. Just the high nibble of the status byte makes up the kind
+        // Channel message. Just the high nibble of the status byte makes up the type
         // (low nibble encodes channel).
         build_byte_from_nibbles(high_status_byte_nibble, 0).try_into()
     }
@@ -409,8 +410,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 145);
         assert_eq!(msg.get_data_byte_1(), u7(64));
         assert_eq!(msg.get_data_byte_2(), u7(100));
-        assert_eq!(msg.get_kind(), MidiMessageKind::NoteOn);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), Some(key_number(64)));
@@ -451,8 +452,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 145);
         assert_eq!(msg.get_data_byte_1(), u7(64));
         assert_eq!(msg.get_data_byte_2(), u7(100));
-        assert_eq!(msg.get_kind(), MidiMessageKind::NoteOn);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), Some(key_number(64)));
@@ -484,8 +485,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0x82);
         assert_eq!(msg.get_data_byte_1(), u7(125));
         assert_eq!(msg.get_data_byte_2(), u7(70));
-        assert_eq!(msg.get_kind(), MidiMessageKind::NoteOff);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::NoteOff);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(2)));
         assert_eq!(msg.get_key_number(), Some(key_number(125)));
@@ -517,8 +518,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0x90);
         assert_eq!(msg.get_data_byte_1(), u7(5));
         assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_kind(), MidiMessageKind::NoteOn);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(0)));
         assert_eq!(msg.get_key_number(), Some(key_number(5)));
@@ -550,8 +551,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xb1);
         assert_eq!(msg.get_data_byte_1(), u7(50));
         assert_eq!(msg.get_data_byte_2(), u7(2));
-        assert_eq!(msg.get_kind(), MidiMessageKind::ControlChange);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::ControlChange);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), None);
@@ -583,8 +584,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xc4);
         assert_eq!(msg.get_data_byte_1(), u7(22));
         assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_kind(), MidiMessageKind::ProgramChange);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::ProgramChange);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(4)));
         assert_eq!(msg.get_key_number(), None);
@@ -615,8 +616,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xaf);
         assert_eq!(msg.get_data_byte_1(), u7(127));
         assert_eq!(msg.get_data_byte_2(), u7(50));
-        assert_eq!(msg.get_kind(), MidiMessageKind::PolyphonicKeyPressure);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::PolyphonicKeyPressure);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(15)));
         assert_eq!(msg.get_key_number(), Some(key_number(127)));
@@ -648,8 +649,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xde);
         assert_eq!(msg.get_data_byte_1(), u7(0));
         assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_kind(), MidiMessageKind::ChannelPressure);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::ChannelPressure);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(14)));
         assert_eq!(msg.get_key_number(), None);
@@ -680,8 +681,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xe1);
         assert_eq!(msg.get_data_byte_1(), u7(126));
         assert_eq!(msg.get_data_byte_2(), u7(9));
-        assert_eq!(msg.get_kind(), MidiMessageKind::PitchBendChange);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::PitchBendChange);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), None);
@@ -712,8 +713,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xf8);
         assert_eq!(msg.get_data_byte_1(), u7(0));
         assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_kind(), MidiMessageKind::TimingClock);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
+        assert_eq!(msg.get_type(), MidiMessageType::TimingClock);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
         assert_eq!(msg.get_channel(), None);
         assert_eq!(msg.get_key_number(), None);
@@ -738,8 +739,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xfa);
         assert_eq!(msg.get_data_byte_1(), u7(0));
         assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_kind(), MidiMessageKind::Start);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
+        assert_eq!(msg.get_type(), MidiMessageType::Start);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
         assert_eq!(msg.get_channel(), None);
         assert_eq!(msg.get_key_number(), None);
@@ -764,8 +765,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xfb);
         assert_eq!(msg.get_data_byte_1(), u7(0));
         assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_kind(), MidiMessageKind::Continue);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
+        assert_eq!(msg.get_type(), MidiMessageType::Continue);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
         assert_eq!(msg.get_channel(), None);
         assert_eq!(msg.get_key_number(), None);
@@ -790,8 +791,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xfc);
         assert_eq!(msg.get_data_byte_1(), u7(0));
         assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_kind(), MidiMessageKind::Stop);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
+        assert_eq!(msg.get_type(), MidiMessageType::Stop);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
         assert_eq!(msg.get_channel(), None);
         assert_eq!(msg.get_key_number(), None);
@@ -816,8 +817,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xfe);
         assert_eq!(msg.get_data_byte_1(), u7(0));
         assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_kind(), MidiMessageKind::ActiveSensing);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
+        assert_eq!(msg.get_type(), MidiMessageType::ActiveSensing);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
         assert_eq!(msg.get_channel(), None);
         assert_eq!(msg.get_key_number(), None);
@@ -842,8 +843,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 0xff);
         assert_eq!(msg.get_data_byte_1(), u7(0));
         assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_kind(), MidiMessageKind::SystemReset);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::SystemRealTime);
+        assert_eq!(msg.get_type(), MidiMessageType::SystemReset);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
         assert_eq!(msg.get_channel(), None);
         assert_eq!(msg.get_key_number(), None);
@@ -874,8 +875,8 @@ mod tests {
         assert_eq!(msg.get_status_byte(), 145);
         assert_eq!(msg.get_data_byte_1(), u7(64));
         assert_eq!(msg.get_data_byte_2(), u7(100));
-        assert_eq!(msg.get_kind(), MidiMessageKind::NoteOn);
-        assert_eq!(msg.get_super_kind(), MidiMessageSuperKind::Channel);
+        assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), Some(key_number(64)));
@@ -894,13 +895,13 @@ mod tests {
     #[test]
     fn structured_and_back() {
         // Given
-        let messages: Vec<RawMidiMessage> = MidiMessageKind::iter()
-            .flat_map(move |kind| match kind.get_super_kind() {
-                MidiMessageSuperKind::Channel => (0..Channel::COUNT)
-                    .map(|c| RawMidiMessage::channel_message(kind, ch(c), U7::MIN, U7::MIN))
+        let messages: Vec<RawMidiMessage> = MidiMessageType::iter()
+            .flat_map(move |t| match t.get_super_type() {
+                MidiMessageSuperType::Channel => (0..Channel::COUNT)
+                    .map(|c| RawMidiMessage::channel_message(t, ch(c), U7::MIN, U7::MIN))
                     .collect(),
-                MidiMessageSuperKind::SystemRealTime => {
-                    vec![RawMidiMessage::system_real_time_message(kind)]
+                MidiMessageSuperType::SystemRealTime => {
+                    vec![RawMidiMessage::system_real_time_message(t)]
                 }
                 _ => vec![],
             })
@@ -919,8 +920,8 @@ mod tests {
         assert_eq!(first.get_status_byte(), second.get_status_byte());
         assert_eq!(first.get_data_byte_1(), second.get_data_byte_1());
         assert_eq!(first.get_data_byte_2(), second.get_data_byte_2());
-        assert_eq!(first.get_kind(), second.get_kind());
-        assert_eq!(first.get_super_kind(), second.get_super_kind());
+        assert_eq!(first.get_type(), second.get_type());
+        assert_eq!(first.get_super_type(), second.get_super_type());
         assert_eq!(first.get_main_category(), second.get_main_category());
         assert_eq!(first.get_channel(), second.get_channel());
         assert_eq!(first.get_key_number(), second.get_key_number());

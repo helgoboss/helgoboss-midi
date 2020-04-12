@@ -12,6 +12,6 @@ pub fn build_14_bit_value_from_two_7_bit_values(high: U7, low: U7) -> U14 {
     U14((u16::from(high) << 7) | u16::from(low))
 }
 
-pub fn build_status_byte(kind_byte: u8, channel: Channel) -> u8 {
-    kind_byte | u8::from(channel)
+pub fn build_status_byte(type_byte: u8, channel: Channel) -> u8 {
+    type_byte | u8::from(channel)
 }

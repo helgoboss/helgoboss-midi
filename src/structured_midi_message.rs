@@ -1,11 +1,11 @@
 use crate::{
     build_status_byte, extract_high_7_bit_value_from_14_bit_value,
     extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber, MidiMessage,
-    MidiMessageFactory, MidiMessageKind, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U4, U7,
+    MidiMessageFactory, MidiMessageType, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U4, U7,
 };
 
 /// MIDI message implemented as an enum where each variant contains exactly the data which is
-/// relevant for the particular MIDI message kind. This enum is primarily intended for read-only
+/// relevant for the particular MIDI message type. This enum is primarily intended for read-only
 /// usage via pattern matching. For that reason each variant is a struct-like enum, which is ideal
 /// for pattern matching while it is less ideal for reuse (the data contained in the variant can't
 /// be passed around in one piece).
@@ -84,39 +84,39 @@ impl MidiMessage for StructuredMidiMessage {
     fn get_status_byte(&self) -> u8 {
         use StructuredMidiMessage::*;
         match self {
-            NoteOff { channel, .. } => build_status_byte(MidiMessageKind::NoteOff.into(), *channel),
-            NoteOn { channel, .. } => build_status_byte(MidiMessageKind::NoteOn.into(), *channel),
+            NoteOff { channel, .. } => build_status_byte(MidiMessageType::NoteOff.into(), *channel),
+            NoteOn { channel, .. } => build_status_byte(MidiMessageType::NoteOn.into(), *channel),
             PolyphonicKeyPressure { channel, .. } => {
-                build_status_byte(MidiMessageKind::PolyphonicKeyPressure.into(), *channel)
+                build_status_byte(MidiMessageType::PolyphonicKeyPressure.into(), *channel)
             }
             ControlChange { channel, .. } => {
-                build_status_byte(MidiMessageKind::ControlChange.into(), *channel)
+                build_status_byte(MidiMessageType::ControlChange.into(), *channel)
             }
             ProgramChange { channel, .. } => {
-                build_status_byte(MidiMessageKind::ProgramChange.into(), *channel)
+                build_status_byte(MidiMessageType::ProgramChange.into(), *channel)
             }
             ChannelPressure { channel, .. } => {
-                build_status_byte(MidiMessageKind::ChannelPressure.into(), *channel)
+                build_status_byte(MidiMessageType::ChannelPressure.into(), *channel)
             }
             PitchBendChange { channel, .. } => {
-                build_status_byte(MidiMessageKind::PitchBendChange.into(), *channel)
+                build_status_byte(MidiMessageType::PitchBendChange.into(), *channel)
             }
-            SystemExclusiveStart => MidiMessageKind::SystemExclusiveStart.into(),
-            MidiTimeCodeQuarterFrame(_) => MidiMessageKind::MidiTimeCodeQuarterFrame.into(),
-            SongPositionPointer { .. } => MidiMessageKind::SongPositionPointer.into(),
-            SongSelect { .. } => MidiMessageKind::SongSelect.into(),
-            TuneRequest => MidiMessageKind::TuneRequest.into(),
-            SystemExclusiveEnd => MidiMessageKind::SystemExclusiveEnd.into(),
-            TimingClock => MidiMessageKind::TimingClock.into(),
-            Start => MidiMessageKind::Start.into(),
-            Continue => MidiMessageKind::Continue.into(),
-            Stop => MidiMessageKind::Stop.into(),
-            ActiveSensing => MidiMessageKind::ActiveSensing.into(),
-            SystemReset => MidiMessageKind::SystemReset.into(),
-            SystemCommonUndefined1 => MidiMessageKind::SystemCommonUndefined1.into(),
-            SystemCommonUndefined2 => MidiMessageKind::SystemCommonUndefined2.into(),
-            SystemRealTimeUndefined1 => MidiMessageKind::SystemRealTimeUndefined1.into(),
-            SystemRealTimeUndefined2 => MidiMessageKind::SystemRealTimeUndefined2.into(),
+            SystemExclusiveStart => MidiMessageType::SystemExclusiveStart.into(),
+            MidiTimeCodeQuarterFrame(_) => MidiMessageType::MidiTimeCodeQuarterFrame.into(),
+            SongPositionPointer { .. } => MidiMessageType::SongPositionPointer.into(),
+            SongSelect { .. } => MidiMessageType::SongSelect.into(),
+            TuneRequest => MidiMessageType::TuneRequest.into(),
+            SystemExclusiveEnd => MidiMessageType::SystemExclusiveEnd.into(),
+            TimingClock => MidiMessageType::TimingClock.into(),
+            Start => MidiMessageType::Start.into(),
+            Continue => MidiMessageType::Continue.into(),
+            Stop => MidiMessageType::Stop.into(),
+            ActiveSensing => MidiMessageType::ActiveSensing.into(),
+            SystemReset => MidiMessageType::SystemReset.into(),
+            SystemCommonUndefined1 => MidiMessageType::SystemCommonUndefined1.into(),
+            SystemCommonUndefined2 => MidiMessageType::SystemCommonUndefined2.into(),
+            SystemRealTimeUndefined1 => MidiMessageType::SystemRealTimeUndefined1.into(),
+            SystemRealTimeUndefined2 => MidiMessageType::SystemRealTimeUndefined2.into(),
         }
     }
 
