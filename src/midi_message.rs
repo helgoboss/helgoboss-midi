@@ -14,6 +14,16 @@ use strum_macros::EnumIter;
 /// advantage of this architecture is that we can have a unified API, no matter which underlying
 /// data structure is used.
 ///
+/// This trait is just for primitive MIDI messages, that is messages which use 3 bytes at a
+/// maximum. It can't represent messages which are longer than 3 bytes, e.g. it can't be used to
+/// represent a complete sys-ex message. This is by design. One main advantage is that
+/// any implementation of this trait can easily implement Copy, which is essential if you want to
+/// pass around messages by copying them instead of dealing with references. MIDI messages are
+/// often processed in a real-time thread where things need to happen fast and heap allocations
+/// are a no-go. If we would make this trait support arbitrarily-sized messages, we would lose Copy
+/// and would have to make everything work with references or pointers - which can bring its
+/// own restrictions such as not being able to use rxRust in a safe way.
+///
 /// Please also implement the trait `MidiMessageFactory` for your struct if creating new MIDI
 /// messages programmatically should be supported.
 pub trait MidiMessage {
