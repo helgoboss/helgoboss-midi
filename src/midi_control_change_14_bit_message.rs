@@ -3,7 +3,7 @@ use crate::{
     ControllerNumber, MidiMessageFactory, U14,
 };
 
-#[derive(Clone, Copy, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct MidiControlChange14BitMessage {
     channel: Channel,
     msb_controller_number: ControllerNumber,

@@ -3,7 +3,7 @@ use crate::{
     StructuredMidiMessage, U7,
 };
 
-#[derive(Default)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
 pub struct MidiParameterNumberMessageParser {
     parser_by_channel: [ParserForOneChannel; Channel::COUNT as usize],
 }
@@ -25,7 +25,7 @@ impl MidiParameterNumberMessageParser {
     }
 }
 
-#[derive(Default, Clone, Copy)]
+#[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
 struct ParserForOneChannel {
     number_msb: Option<U7>,
     number_lsb: Option<U7>,

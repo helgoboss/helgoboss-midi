@@ -1,6 +1,6 @@
 use crate::{MidiMessage, MidiMessageFactory, U7};
 
-#[derive(Clone, Debug, PartialEq, Eq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub struct RawMidiMessage {
     status_byte: u8,
     data_byte_1: U7,

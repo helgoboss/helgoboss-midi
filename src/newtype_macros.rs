@@ -2,7 +2,7 @@
 // TODO Consider into_inner() method (https://rust-lang.github.io/api-guidelines/naming.html#c-case)
 macro_rules! newtype {
     ($name: ident, $repr: ty, $max: literal, $factory: ident) => {
-        #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
+        #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
         pub struct $name(pub(crate) $repr);
 
         impl $name {
