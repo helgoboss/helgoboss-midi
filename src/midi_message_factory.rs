@@ -1,5 +1,5 @@
 use crate::{
-    build_status_byte, get_midi_message_type_from_status_byte, BlurryMidiMessageSuperType, Channel,
+    build_status_byte, midi_message_type_from_status_byte, BlurryMidiMessageSuperType, Channel,
     ControllerNumber, KeyNumber, MidiMessage, MidiMessageType, MidiTimeCodeQuarterFrame,
     StructuredMidiMessage, U14, U7,
 };
@@ -18,22 +18,18 @@ pub trait MidiMessageFactory: Sized {
     // acts a bit like a parse function where client code should be able to recover from wrong
     // input.
     fn from_bytes(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Result<Self, &'static str> {
-        get_midi_message_type_from_status_byte(status_byte).map_err(|_| "Invalid status byte")?;
+        midi_message_type_from_status_byte(status_byte).map_err(|_| "Invalid status byte")?;
         Ok(unsafe { Self::from_bytes_unchecked(status_byte, data_byte_1, data_byte_2) })
     }
 
     fn from_structured(msg: &StructuredMidiMessage) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
-                msg.get_status_byte(),
-                msg.get_data_byte_1(),
-                msg.get_data_byte_2(),
-            )
+            Self::from_bytes_unchecked(msg.status_byte(), msg.data_byte_1(), msg.data_byte_2())
         }
     }
 
     fn channel_message(r#type: MidiMessageType, channel: Channel, data_1: U7, data_2: U7) -> Self {
-        assert_eq!(r#type.get_super_type(), BlurryMidiMessageSuperType::Channel);
+        assert_eq!(r#type.super_type(), BlurryMidiMessageSuperType::Channel);
         unsafe {
             Self::from_bytes_unchecked(build_status_byte(r#type.into(), channel), data_1, data_2)
         }
@@ -41,7 +37,7 @@ pub trait MidiMessageFactory: Sized {
 
     fn system_common_message(r#type: MidiMessageType, data_1: U7, data_2: U7) -> Self {
         assert_eq!(
-            r#type.get_super_type(),
+            r#type.super_type(),
             BlurryMidiMessageSuperType::SystemCommon
         );
         unsafe { Self::from_bytes_unchecked(r#type.into(), data_1, data_2) }
@@ -49,7 +45,7 @@ pub trait MidiMessageFactory: Sized {
 
     fn system_real_time_message(r#type: MidiMessageType) -> Self {
         assert_eq!(
-            r#type.get_super_type(),
+            r#type.super_type(),
             BlurryMidiMessageSuperType::SystemRealTime
         );
         unsafe { Self::from_bytes_unchecked(r#type.into(), U7::MIN, U7::MIN) }

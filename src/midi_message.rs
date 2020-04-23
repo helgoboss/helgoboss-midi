@@ -26,20 +26,20 @@ use strum_macros::EnumIter;
 /// Please also implement the trait `MidiMessageFactory` for your struct if creating new MIDI
 /// messages programmatically should be supported.
 pub trait MidiMessage {
-    fn get_status_byte(&self) -> u8;
+    fn status_byte(&self) -> u8;
 
-    fn get_data_byte_1(&self) -> U7;
+    fn data_byte_1(&self) -> U7;
 
-    fn get_data_byte_2(&self) -> U7;
+    fn data_byte_2(&self) -> U7;
 
-    fn get_type(&self) -> MidiMessageType {
-        get_midi_message_type_from_status_byte(self.get_status_byte()).unwrap()
+    fn r#type(&self) -> MidiMessageType {
+        midi_message_type_from_status_byte(self.status_byte()).unwrap()
     }
 
-    fn get_super_type(&self) -> MidiMessageSuperType {
+    fn super_type(&self) -> MidiMessageSuperType {
         use MidiMessageSuperType::*;
         use MidiMessageType::*;
-        match self.get_type() {
+        match self.r#type() {
             NoteOn
             | NoteOff
             | ChannelPressure
@@ -47,7 +47,7 @@ pub trait MidiMessage {
             | PitchBendChange
             | ProgramChange => ChannelVoice,
             ControlChange => {
-                if ControllerNumber::from(self.get_data_byte_1())
+                if ControllerNumber::from(self.data_byte_1())
                     < ControllerNumber::LOCAL_CONTROL_ON_OFF
                 {
                     ChannelVoice
@@ -74,60 +74,60 @@ pub trait MidiMessage {
         }
     }
 
-    fn get_main_category(&self) -> MidiMessageMainCategory {
-        self.get_super_type().get_main_category()
+    fn main_category(&self) -> MidiMessageMainCategory {
+        self.super_type().main_category()
     }
 
     fn to_structured(&self) -> StructuredMidiMessage {
         use MidiMessageType::*;
-        match self.get_type() {
+        match self.r#type() {
             NoteOff => StructuredMidiMessage::NoteOff {
-                channel: extract_channel_from_status_byte(self.get_status_byte()),
-                key_number: self.get_data_byte_1().into(),
-                velocity: self.get_data_byte_2(),
+                channel: extract_channel_from_status_byte(self.status_byte()),
+                key_number: self.data_byte_1().into(),
+                velocity: self.data_byte_2(),
             },
             NoteOn => StructuredMidiMessage::NoteOn {
-                channel: extract_channel_from_status_byte(self.get_status_byte()),
-                key_number: self.get_data_byte_1().into(),
-                velocity: self.get_data_byte_2(),
+                channel: extract_channel_from_status_byte(self.status_byte()),
+                key_number: self.data_byte_1().into(),
+                velocity: self.data_byte_2(),
             },
             PolyphonicKeyPressure => StructuredMidiMessage::PolyphonicKeyPressure {
-                channel: extract_channel_from_status_byte(self.get_status_byte()),
-                key_number: self.get_data_byte_1().into(),
-                pressure_amount: self.get_data_byte_2(),
+                channel: extract_channel_from_status_byte(self.status_byte()),
+                key_number: self.data_byte_1().into(),
+                pressure_amount: self.data_byte_2(),
             },
             ControlChange => StructuredMidiMessage::ControlChange {
-                channel: extract_channel_from_status_byte(self.get_status_byte()),
-                controller_number: self.get_data_byte_1().into(),
-                control_value: self.get_data_byte_2(),
+                channel: extract_channel_from_status_byte(self.status_byte()),
+                controller_number: self.data_byte_1().into(),
+                control_value: self.data_byte_2(),
             },
             ProgramChange => StructuredMidiMessage::ProgramChange {
-                channel: extract_channel_from_status_byte(self.get_status_byte()),
-                program_number: self.get_data_byte_1().into(),
+                channel: extract_channel_from_status_byte(self.status_byte()),
+                program_number: self.data_byte_1().into(),
             },
             ChannelPressure => StructuredMidiMessage::ChannelPressure {
-                channel: extract_channel_from_status_byte(self.get_status_byte()),
-                pressure_amount: self.get_data_byte_1(),
+                channel: extract_channel_from_status_byte(self.status_byte()),
+                pressure_amount: self.data_byte_1(),
             },
             PitchBendChange => StructuredMidiMessage::PitchBendChange {
-                channel: extract_channel_from_status_byte(self.get_status_byte()),
+                channel: extract_channel_from_status_byte(self.status_byte()),
                 pitch_bend_value: build_14_bit_value_from_two_7_bit_values(
-                    self.get_data_byte_2(),
-                    self.get_data_byte_1(),
+                    self.data_byte_2(),
+                    self.data_byte_1(),
                 ),
             },
             SystemExclusiveStart => StructuredMidiMessage::SystemExclusiveStart,
             MidiTimeCodeQuarterFrame => {
-                StructuredMidiMessage::MidiTimeCodeQuarterFrame(self.get_data_byte_1().into())
+                StructuredMidiMessage::MidiTimeCodeQuarterFrame(self.data_byte_1().into())
             }
             SongPositionPointer => StructuredMidiMessage::SongPositionPointer {
                 position: build_14_bit_value_from_two_7_bit_values(
-                    self.get_data_byte_2(),
-                    self.get_data_byte_1(),
+                    self.data_byte_2(),
+                    self.data_byte_1(),
                 ),
             },
             SongSelect => StructuredMidiMessage::SongSelect {
-                song_number: self.get_data_byte_1(),
+                song_number: self.data_byte_1(),
             },
             TuneRequest => StructuredMidiMessage::TuneRequest,
             SystemExclusiveEnd => StructuredMidiMessage::SystemExclusiveEnd,
@@ -163,72 +163,72 @@ pub trait MidiMessage {
     }
 
     fn is_note(&self) -> bool {
-        match self.get_type() {
+        match self.r#type() {
             MidiMessageType::NoteOn | MidiMessageType::NoteOff => true,
             _ => false,
         }
     }
 
-    fn get_channel(&self) -> Option<Channel> {
-        if self.get_main_category() != MidiMessageMainCategory::Channel {
+    fn channel(&self) -> Option<Channel> {
+        if self.main_category() != MidiMessageMainCategory::Channel {
             return None;
         }
-        Some(extract_channel_from_status_byte(self.get_status_byte()))
+        Some(extract_channel_from_status_byte(self.status_byte()))
     }
 
-    fn get_key_number(&self) -> Option<KeyNumber> {
+    fn key_number(&self) -> Option<KeyNumber> {
         use MidiMessageType::*;
-        match self.get_type() {
-            NoteOff | NoteOn | PolyphonicKeyPressure => Some(self.get_data_byte_1().into()),
+        match self.r#type() {
+            NoteOff | NoteOn | PolyphonicKeyPressure => Some(self.data_byte_1().into()),
             _ => None,
         }
     }
 
-    fn get_velocity(&self) -> Option<U7> {
+    fn velocity(&self) -> Option<U7> {
         use MidiMessageType::*;
-        match self.get_type() {
-            NoteOff | NoteOn => Some(self.get_data_byte_2()),
+        match self.r#type() {
+            NoteOff | NoteOn => Some(self.data_byte_2()),
             _ => None,
         }
     }
 
-    fn get_controller_number(&self) -> Option<ControllerNumber> {
-        if self.get_type() != MidiMessageType::ControlChange {
+    fn controller_number(&self) -> Option<ControllerNumber> {
+        if self.r#type() != MidiMessageType::ControlChange {
             return None;
         }
-        Some(self.get_data_byte_1().into())
+        Some(self.data_byte_1().into())
     }
 
-    fn get_control_value(&self) -> Option<U7> {
-        if self.get_type() != MidiMessageType::ControlChange {
+    fn control_value(&self) -> Option<U7> {
+        if self.r#type() != MidiMessageType::ControlChange {
             return None;
         }
-        Some(self.get_data_byte_2())
+        Some(self.data_byte_2())
     }
 
-    fn get_program_number(&self) -> Option<U7> {
-        if self.get_type() != MidiMessageType::ProgramChange {
+    fn program_number(&self) -> Option<U7> {
+        if self.r#type() != MidiMessageType::ProgramChange {
             return None;
         }
-        Some(self.get_data_byte_1())
+        Some(self.data_byte_1())
     }
 
-    fn get_pressure_amount(&self) -> Option<U7> {
+    fn pressure_amount(&self) -> Option<U7> {
         use MidiMessageType::*;
-        match self.get_type() {
-            PolyphonicKeyPressure => Some(self.get_data_byte_2()),
-            ChannelPressure => Some(self.get_data_byte_1()),
+        match self.r#type() {
+            PolyphonicKeyPressure => Some(self.data_byte_2()),
+            ChannelPressure => Some(self.data_byte_1()),
             _ => None,
         }
     }
 
-    fn get_pitch_bend_value(&self) -> Option<U14> {
-        if self.get_type() != MidiMessageType::PitchBendChange {
+    fn pitch_bend_value(&self) -> Option<U14> {
+        if self.r#type() != MidiMessageType::PitchBendChange {
             return None;
         }
         Some(build_14_bit_value_from_two_7_bit_values(
-            self.get_data_byte_2(),
-            self.get_data_byte_1(),
+            self.data_byte_2(),
+            self.data_byte_1(),
         ))
     }
 }
@@ -268,7 +268,7 @@ pub enum MidiMessageType {
 }
 
 impl MidiMessageType {
-    pub fn get_super_type(&self) -> BlurryMidiMessageSuperType {
+    pub fn super_type(&self) -> BlurryMidiMessageSuperType {
         use BlurryMidiMessageSuperType::*;
         use MidiMessageType::*;
         match self {
@@ -322,7 +322,7 @@ pub enum MidiMessageSuperType {
 }
 
 impl BlurryMidiMessageSuperType {
-    pub fn get_main_category(&self) -> MidiMessageMainCategory {
+    pub fn main_category(&self) -> MidiMessageMainCategory {
         use MidiMessageMainCategory::*;
         if *self == BlurryMidiMessageSuperType::Channel {
             Channel
@@ -333,7 +333,7 @@ impl BlurryMidiMessageSuperType {
 }
 
 impl MidiMessageSuperType {
-    pub fn get_main_category(&self) -> MidiMessageMainCategory {
+    pub fn main_category(&self) -> MidiMessageMainCategory {
         use MidiMessageMainCategory::*;
         use MidiMessageSuperType::*;
         match *self {
@@ -405,13 +405,10 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
             4 => MinutesCountLsNibble(extract_low_nibble_from_byte(data)),
             5 => MinutesCountMsNibble(extract_low_nibble_from_byte(data)),
             6 => HoursCountLsNibble(extract_low_nibble_from_byte(data)),
-            7 => {
-                
-                Last {
-                    hours_count_ms_bit: (data & 0b0000001) != 0,
-                    time_code_type: ((data & 0b0000110) >> 1).try_into().unwrap(),
-                }
-            }
+            7 => Last {
+                hours_count_ms_bit: (data & 0b0000001) != 0,
+                time_code_type: ((data & 0b0000110) >> 1).try_into().unwrap(),
+            },
             _ => unreachable!(),
         }
     }
@@ -431,7 +428,7 @@ fn extract_channel_from_status_byte(byte: u8) -> Channel {
     Channel(byte & 0x0f)
 }
 
-pub(crate) fn get_midi_message_type_from_status_byte(
+pub(crate) fn midi_message_type_from_status_byte(
     status_byte: u8,
 ) -> Result<MidiMessageType, TryFromPrimitiveError<MidiMessageType>> {
     let high_status_byte_nibble = extract_high_nibble_from_byte(status_byte);
@@ -471,20 +468,20 @@ mod tests {
         let msg = RawMidiMessage::from_bytes(145, u7(64), u7(100)).unwrap();
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 145);
-        assert_eq!(msg.get_data_byte_1(), u7(64));
-        assert_eq!(msg.get_data_byte_2(), u7(100));
-        assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(1)));
-        assert_eq!(msg.get_key_number(), Some(key_number(64)));
-        assert_eq!(msg.get_velocity(), Some(u7(100)));
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 145);
+        assert_eq!(msg.data_byte_1(), u7(64));
+        assert_eq!(msg.data_byte_2(), u7(100));
+        assert_eq!(msg.r#type(), MidiMessageType::NoteOn);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(1)));
+        assert_eq!(msg.key_number(), Some(key_number(64)));
+        assert_eq!(msg.velocity(), Some(u7(100)));
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::NoteOn {
@@ -513,20 +510,20 @@ mod tests {
         let msg = RawMidiMessage::note_on(ch(1), key_number(64), u7(100));
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 145);
-        assert_eq!(msg.get_data_byte_1(), u7(64));
-        assert_eq!(msg.get_data_byte_2(), u7(100));
-        assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(1)));
-        assert_eq!(msg.get_key_number(), Some(key_number(64)));
-        assert_eq!(msg.get_velocity(), Some(u7(100)));
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 145);
+        assert_eq!(msg.data_byte_1(), u7(64));
+        assert_eq!(msg.data_byte_2(), u7(100));
+        assert_eq!(msg.r#type(), MidiMessageType::NoteOn);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(1)));
+        assert_eq!(msg.key_number(), Some(key_number(64)));
+        assert_eq!(msg.velocity(), Some(u7(100)));
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::NoteOn {
@@ -546,20 +543,20 @@ mod tests {
         let msg = RawMidiMessage::note_off(ch(2), key_number(125), u7(70));
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0x82);
-        assert_eq!(msg.get_data_byte_1(), u7(125));
-        assert_eq!(msg.get_data_byte_2(), u7(70));
-        assert_eq!(msg.get_type(), MidiMessageType::NoteOff);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(2)));
-        assert_eq!(msg.get_key_number(), Some(key_number(125)));
-        assert_eq!(msg.get_velocity(), Some(u7(70)));
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0x82);
+        assert_eq!(msg.data_byte_1(), u7(125));
+        assert_eq!(msg.data_byte_2(), u7(70));
+        assert_eq!(msg.r#type(), MidiMessageType::NoteOff);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(2)));
+        assert_eq!(msg.key_number(), Some(key_number(125)));
+        assert_eq!(msg.velocity(), Some(u7(70)));
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::NoteOff {
@@ -579,20 +576,20 @@ mod tests {
         let msg = RawMidiMessage::note_on(ch(0), key_number(5), u7(0));
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0x90);
-        assert_eq!(msg.get_data_byte_1(), u7(5));
-        assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(0)));
-        assert_eq!(msg.get_key_number(), Some(key_number(5)));
-        assert_eq!(msg.get_velocity(), Some(u7(0)));
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0x90);
+        assert_eq!(msg.data_byte_1(), u7(5));
+        assert_eq!(msg.data_byte_2(), u7(0));
+        assert_eq!(msg.r#type(), MidiMessageType::NoteOn);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(0)));
+        assert_eq!(msg.key_number(), Some(key_number(5)));
+        assert_eq!(msg.velocity(), Some(u7(0)));
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::NoteOn {
@@ -612,20 +609,20 @@ mod tests {
         let msg = RawMidiMessage::control_change(ch(1), controller_number(50), u7(2));
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xb1);
-        assert_eq!(msg.get_data_byte_1(), u7(50));
-        assert_eq!(msg.get_data_byte_2(), u7(2));
-        assert_eq!(msg.get_type(), MidiMessageType::ControlChange);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(1)));
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), Some(controller_number(50)));
-        assert_eq!(msg.get_control_value(), Some(u7(2)));
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xb1);
+        assert_eq!(msg.data_byte_1(), u7(50));
+        assert_eq!(msg.data_byte_2(), u7(2));
+        assert_eq!(msg.r#type(), MidiMessageType::ControlChange);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(1)));
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), Some(controller_number(50)));
+        assert_eq!(msg.control_value(), Some(u7(2)));
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::ControlChange {
@@ -645,20 +642,20 @@ mod tests {
         let msg = RawMidiMessage::program_change(ch(4), u7(22));
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xc4);
-        assert_eq!(msg.get_data_byte_1(), u7(22));
-        assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_type(), MidiMessageType::ProgramChange);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(4)));
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), Some(u7(22)));
+        assert_eq!(msg.status_byte(), 0xc4);
+        assert_eq!(msg.data_byte_1(), u7(22));
+        assert_eq!(msg.data_byte_2(), u7(0));
+        assert_eq!(msg.r#type(), MidiMessageType::ProgramChange);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(4)));
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), Some(u7(22)));
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::ProgramChange {
@@ -677,20 +674,20 @@ mod tests {
         let msg = RawMidiMessage::polyphonic_key_pressure(ch(15), key_number(127), u7(50));
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xaf);
-        assert_eq!(msg.get_data_byte_1(), u7(127));
-        assert_eq!(msg.get_data_byte_2(), u7(50));
-        assert_eq!(msg.get_type(), MidiMessageType::PolyphonicKeyPressure);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(15)));
-        assert_eq!(msg.get_key_number(), Some(key_number(127)));
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), Some(u7(50)));
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xaf);
+        assert_eq!(msg.data_byte_1(), u7(127));
+        assert_eq!(msg.data_byte_2(), u7(50));
+        assert_eq!(msg.r#type(), MidiMessageType::PolyphonicKeyPressure);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(15)));
+        assert_eq!(msg.key_number(), Some(key_number(127)));
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), Some(u7(50)));
+        assert_eq!(msg.program_number(), None);
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::PolyphonicKeyPressure {
@@ -710,20 +707,20 @@ mod tests {
         let msg = RawMidiMessage::channel_pressure(ch(14), u7(0));
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xde);
-        assert_eq!(msg.get_data_byte_1(), u7(0));
-        assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_type(), MidiMessageType::ChannelPressure);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(14)));
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), Some(u7(0)));
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xde);
+        assert_eq!(msg.data_byte_1(), u7(0));
+        assert_eq!(msg.data_byte_2(), u7(0));
+        assert_eq!(msg.r#type(), MidiMessageType::ChannelPressure);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(14)));
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), Some(u7(0)));
+        assert_eq!(msg.program_number(), None);
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::ChannelPressure {
@@ -742,20 +739,20 @@ mod tests {
         let msg = RawMidiMessage::pitch_bend_change(ch(1), u14(1278));
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xe1);
-        assert_eq!(msg.get_data_byte_1(), u7(126));
-        assert_eq!(msg.get_data_byte_2(), u7(9));
-        assert_eq!(msg.get_type(), MidiMessageType::PitchBendChange);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(1)));
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), Some(u14(1278)));
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xe1);
+        assert_eq!(msg.data_byte_1(), u7(126));
+        assert_eq!(msg.data_byte_2(), u7(9));
+        assert_eq!(msg.r#type(), MidiMessageType::PitchBendChange);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(1)));
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), Some(u14(1278)));
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(
             msg.to_structured(),
             StructuredMidiMessage::PitchBendChange {
@@ -774,20 +771,20 @@ mod tests {
         let msg = RawMidiMessage::timing_clock();
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xf8);
-        assert_eq!(msg.get_data_byte_1(), u7(0));
-        assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_type(), MidiMessageType::TimingClock);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
-        assert_eq!(msg.get_channel(), None);
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xf8);
+        assert_eq!(msg.data_byte_1(), u7(0));
+        assert_eq!(msg.data_byte_2(), u7(0));
+        assert_eq!(msg.r#type(), MidiMessageType::TimingClock);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::SystemRealTime);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::System);
+        assert_eq!(msg.channel(), None);
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(msg.to_structured(), StructuredMidiMessage::TimingClock);
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -800,20 +797,20 @@ mod tests {
         let msg = RawMidiMessage::start();
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xfa);
-        assert_eq!(msg.get_data_byte_1(), u7(0));
-        assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_type(), MidiMessageType::Start);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
-        assert_eq!(msg.get_channel(), None);
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xfa);
+        assert_eq!(msg.data_byte_1(), u7(0));
+        assert_eq!(msg.data_byte_2(), u7(0));
+        assert_eq!(msg.r#type(), MidiMessageType::Start);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::SystemRealTime);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::System);
+        assert_eq!(msg.channel(), None);
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(msg.to_structured(), StructuredMidiMessage::Start);
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -826,20 +823,20 @@ mod tests {
         let msg = RawMidiMessage::r#continue();
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xfb);
-        assert_eq!(msg.get_data_byte_1(), u7(0));
-        assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_type(), MidiMessageType::Continue);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
-        assert_eq!(msg.get_channel(), None);
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xfb);
+        assert_eq!(msg.data_byte_1(), u7(0));
+        assert_eq!(msg.data_byte_2(), u7(0));
+        assert_eq!(msg.r#type(), MidiMessageType::Continue);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::SystemRealTime);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::System);
+        assert_eq!(msg.channel(), None);
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(msg.to_structured(), StructuredMidiMessage::Continue);
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -852,20 +849,20 @@ mod tests {
         let msg = RawMidiMessage::stop();
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xfc);
-        assert_eq!(msg.get_data_byte_1(), u7(0));
-        assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_type(), MidiMessageType::Stop);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
-        assert_eq!(msg.get_channel(), None);
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xfc);
+        assert_eq!(msg.data_byte_1(), u7(0));
+        assert_eq!(msg.data_byte_2(), u7(0));
+        assert_eq!(msg.r#type(), MidiMessageType::Stop);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::SystemRealTime);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::System);
+        assert_eq!(msg.channel(), None);
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(msg.to_structured(), StructuredMidiMessage::Stop);
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -878,20 +875,20 @@ mod tests {
         let msg = RawMidiMessage::active_sensing();
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xfe);
-        assert_eq!(msg.get_data_byte_1(), u7(0));
-        assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_type(), MidiMessageType::ActiveSensing);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
-        assert_eq!(msg.get_channel(), None);
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xfe);
+        assert_eq!(msg.data_byte_1(), u7(0));
+        assert_eq!(msg.data_byte_2(), u7(0));
+        assert_eq!(msg.r#type(), MidiMessageType::ActiveSensing);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::SystemRealTime);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::System);
+        assert_eq!(msg.channel(), None);
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(msg.to_structured(), StructuredMidiMessage::ActiveSensing);
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -904,20 +901,20 @@ mod tests {
         let msg = RawMidiMessage::system_reset();
         // When
         // Then
-        assert_eq!(msg.get_status_byte(), 0xff);
-        assert_eq!(msg.get_data_byte_1(), u7(0));
-        assert_eq!(msg.get_data_byte_2(), u7(0));
-        assert_eq!(msg.get_type(), MidiMessageType::SystemReset);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::SystemRealTime);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::System);
-        assert_eq!(msg.get_channel(), None);
-        assert_eq!(msg.get_key_number(), None);
-        assert_eq!(msg.get_velocity(), None);
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 0xff);
+        assert_eq!(msg.data_byte_1(), u7(0));
+        assert_eq!(msg.data_byte_2(), u7(0));
+        assert_eq!(msg.r#type(), MidiMessageType::SystemReset);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::SystemRealTime);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::System);
+        assert_eq!(msg.channel(), None);
+        assert_eq!(msg.key_number(), None);
+        assert_eq!(msg.velocity(), None);
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(msg.to_structured(), StructuredMidiMessage::SystemReset);
         assert!(!msg.is_note());
         assert!(!msg.is_note_on());
@@ -936,20 +933,20 @@ mod tests {
             velocity: u7(100),
         };
         assert_eq!(msg, expected_msg);
-        assert_eq!(msg.get_status_byte(), 145);
-        assert_eq!(msg.get_data_byte_1(), u7(64));
-        assert_eq!(msg.get_data_byte_2(), u7(100));
-        assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
-        assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
-        assert_eq!(msg.get_channel(), Some(ch(1)));
-        assert_eq!(msg.get_key_number(), Some(key_number(64)));
-        assert_eq!(msg.get_velocity(), Some(u7(100)));
-        assert_eq!(msg.get_controller_number(), None);
-        assert_eq!(msg.get_control_value(), None);
-        assert_eq!(msg.get_pitch_bend_value(), None);
-        assert_eq!(msg.get_pressure_amount(), None);
-        assert_eq!(msg.get_program_number(), None);
+        assert_eq!(msg.status_byte(), 145);
+        assert_eq!(msg.data_byte_1(), u7(64));
+        assert_eq!(msg.data_byte_2(), u7(100));
+        assert_eq!(msg.r#type(), MidiMessageType::NoteOn);
+        assert_eq!(msg.super_type(), MidiMessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MidiMessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(1)));
+        assert_eq!(msg.key_number(), Some(key_number(64)));
+        assert_eq!(msg.velocity(), Some(u7(100)));
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
         assert_eq!(msg.to_structured(), expected_msg);
         assert!(msg.is_note());
         assert!(msg.is_note_on());
@@ -960,7 +957,7 @@ mod tests {
     fn structured_and_back() {
         // Given
         let messages: Vec<RawMidiMessage> = MidiMessageType::iter()
-            .flat_map(move |t| match t.get_super_type() {
+            .flat_map(move |t| match t.super_type() {
                 BlurryMidiMessageSuperType::Channel => (0..Channel::COUNT)
                     .map(|c| RawMidiMessage::channel_message(t, ch(c), U7::MIN, U7::MIN))
                     .collect(),
@@ -981,23 +978,20 @@ mod tests {
     }
 
     fn assert_equal_results(first: &impl MidiMessage, second: &impl MidiMessage) {
-        assert_eq!(first.get_status_byte(), second.get_status_byte());
-        assert_eq!(first.get_data_byte_1(), second.get_data_byte_1());
-        assert_eq!(first.get_data_byte_2(), second.get_data_byte_2());
-        assert_eq!(first.get_type(), second.get_type());
-        assert_eq!(first.get_super_type(), second.get_super_type());
-        assert_eq!(first.get_main_category(), second.get_main_category());
-        assert_eq!(first.get_channel(), second.get_channel());
-        assert_eq!(first.get_key_number(), second.get_key_number());
-        assert_eq!(first.get_velocity(), second.get_velocity());
-        assert_eq!(
-            first.get_controller_number(),
-            second.get_controller_number()
-        );
-        assert_eq!(first.get_control_value(), second.get_control_value());
-        assert_eq!(first.get_pitch_bend_value(), second.get_pitch_bend_value());
-        assert_eq!(first.get_pressure_amount(), second.get_pressure_amount());
-        assert_eq!(first.get_program_number(), second.get_program_number());
+        assert_eq!(first.status_byte(), second.status_byte());
+        assert_eq!(first.data_byte_1(), second.data_byte_1());
+        assert_eq!(first.data_byte_2(), second.data_byte_2());
+        assert_eq!(first.r#type(), second.r#type());
+        assert_eq!(first.super_type(), second.super_type());
+        assert_eq!(first.main_category(), second.main_category());
+        assert_eq!(first.channel(), second.channel());
+        assert_eq!(first.key_number(), second.key_number());
+        assert_eq!(first.velocity(), second.velocity());
+        assert_eq!(first.controller_number(), second.controller_number());
+        assert_eq!(first.control_value(), second.control_value());
+        assert_eq!(first.pitch_bend_value(), second.pitch_bend_value());
+        assert_eq!(first.pressure_amount(), second.pressure_amount());
+        assert_eq!(first.program_number(), second.program_number());
         assert_eq!(first.is_note(), second.is_note());
         assert_eq!(first.is_note_on(), second.is_note_on());
         assert_eq!(first.is_note_off(), second.is_note_off());

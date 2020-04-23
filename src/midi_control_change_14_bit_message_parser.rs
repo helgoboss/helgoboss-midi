@@ -15,7 +15,7 @@ impl MidiControlChange14BitMessageParser {
     }
 
     pub fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiControlChange14BitMessage> {
-        let channel = msg.get_channel()?;
+        let channel = msg.channel()?;
         self.parser_by_channel[usize::from(channel)].feed(msg)
     }
 
@@ -78,11 +78,7 @@ impl ParserForOneChannel {
     ) -> Option<MidiControlChange14BitMessage> {
         let msb_controller_number = self.msb_controller_number?;
         let value_msb = self.value_msb?;
-        if lsb_controller_number
-            != msb_controller_number
-                .get_corresponding_14_bit_lsb()
-                .unwrap()
-        {
+        if lsb_controller_number != msb_controller_number.corresponding_14_bit_lsb().unwrap() {
             return None;
         }
         let value = build_14_bit_value_from_two_7_bit_values(value_msb, value_lsb);
@@ -130,10 +126,10 @@ mod tests {
         // Then
         assert_eq!(result_1, None);
         let result_2 = result_2.unwrap();
-        assert_eq!(result_2.get_channel(), ch(5));
-        assert_eq!(result_2.get_msb_controller_number(), cn(2));
-        assert_eq!(result_2.get_lsb_controller_number(), cn(34));
-        assert_eq!(result_2.get_value(), u14(1057));
+        assert_eq!(result_2.channel(), ch(5));
+        assert_eq!(result_2.msb_controller_number(), cn(2));
+        assert_eq!(result_2.lsb_controller_number(), cn(34));
+        assert_eq!(result_2.value(), u14(1057));
     }
 
     #[test]
@@ -149,15 +145,15 @@ mod tests {
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
         let result_3 = result_3.unwrap();
-        assert_eq!(result_3.get_channel(), ch(5));
-        assert_eq!(result_3.get_msb_controller_number(), cn(2));
-        assert_eq!(result_3.get_lsb_controller_number(), cn(34));
-        assert_eq!(result_3.get_value(), u14(1057));
+        assert_eq!(result_3.channel(), ch(5));
+        assert_eq!(result_3.msb_controller_number(), cn(2));
+        assert_eq!(result_3.lsb_controller_number(), cn(34));
+        assert_eq!(result_3.value(), u14(1057));
         let result_4 = result_4.unwrap();
-        assert_eq!(result_4.get_channel(), ch(6));
-        assert_eq!(result_4.get_msb_controller_number(), cn(3));
-        assert_eq!(result_4.get_lsb_controller_number(), cn(35));
-        assert_eq!(result_4.get_value(), u14(1058));
+        assert_eq!(result_4.channel(), ch(6));
+        assert_eq!(result_4.msb_controller_number(), cn(3));
+        assert_eq!(result_4.lsb_controller_number(), cn(35));
+        assert_eq!(result_4.value(), u14(1058));
     }
 
     #[test]
@@ -172,10 +168,10 @@ mod tests {
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
         let result_3 = result_3.unwrap();
-        assert_eq!(result_3.get_channel(), ch(5));
-        assert_eq!(result_3.get_msb_controller_number(), cn(2));
-        assert_eq!(result_3.get_lsb_controller_number(), cn(34));
-        assert_eq!(result_3.get_value(), u14(1057));
+        assert_eq!(result_3.channel(), ch(5));
+        assert_eq!(result_3.msb_controller_number(), cn(2));
+        assert_eq!(result_3.lsb_controller_number(), cn(34));
+        assert_eq!(result_3.value(), u14(1057));
     }
 
     #[test]
@@ -192,9 +188,9 @@ mod tests {
         assert_eq!(result_2, None);
         assert_eq!(result_3, None);
         let result_4 = result_4.unwrap();
-        assert_eq!(result_4.get_channel(), ch(5));
-        assert_eq!(result_4.get_msb_controller_number(), cn(3));
-        assert_eq!(result_4.get_lsb_controller_number(), cn(35));
-        assert_eq!(result_4.get_value(), u14(1058));
+        assert_eq!(result_4.channel(), ch(5));
+        assert_eq!(result_4.msb_controller_number(), cn(3));
+        assert_eq!(result_4.lsb_controller_number(), cn(35));
+        assert_eq!(result_4.value(), u14(1058));
     }
 }

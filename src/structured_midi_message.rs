@@ -81,7 +81,7 @@ impl MidiMessageFactory for StructuredMidiMessage {
 }
 
 impl MidiMessage for StructuredMidiMessage {
-    fn get_status_byte(&self) -> u8 {
+    fn status_byte(&self) -> u8 {
         use StructuredMidiMessage::*;
         match self {
             NoteOff { channel, .. } => build_status_byte(MidiMessageType::NoteOff.into(), *channel),
@@ -120,7 +120,7 @@ impl MidiMessage for StructuredMidiMessage {
         }
     }
 
-    fn get_data_byte_1(&self) -> U7 {
+    fn data_byte_1(&self) -> U7 {
         use StructuredMidiMessage::*;
         match self {
             NoteOff { key_number, .. } => (*key_number).into(),
@@ -157,7 +157,7 @@ impl MidiMessage for StructuredMidiMessage {
         }
     }
 
-    fn get_data_byte_2(&self) -> U7 {
+    fn data_byte_2(&self) -> U7 {
         use StructuredMidiMessage::*;
         match self {
             NoteOff { velocity, .. } => *velocity,

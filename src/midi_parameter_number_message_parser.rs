@@ -15,7 +15,7 @@ impl MidiParameterNumberMessageParser {
     }
 
     pub fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiParameterNumberMessage> {
-        let channel = msg.get_channel()?;
+        let channel = msg.channel()?;
         self.parser_by_channel[usize::from(channel)].feed(msg)
     }
 
@@ -174,9 +174,9 @@ mod tests {
         assert_eq!(result_2, None);
         assert_eq!(result_3, None);
         let result_4 = result_4.unwrap();
-        assert_eq!(result_4.get_channel(), ch(0));
-        assert_eq!(result_4.get_number(), u14(420));
-        assert_eq!(result_4.get_value(), u14(15000));
+        assert_eq!(result_4.channel(), ch(0));
+        assert_eq!(result_4.number(), u14(420));
+        assert_eq!(result_4.value(), u14(15000));
         assert!(result_4.is_registered());
         assert!(result_4.is_14_bit());
     }
@@ -193,9 +193,9 @@ mod tests {
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
         let result_3 = result_3.unwrap();
-        assert_eq!(result_3.get_channel(), ch(2));
-        assert_eq!(result_3.get_number(), u14(421));
-        assert_eq!(result_3.get_value(), u14(126));
+        assert_eq!(result_3.channel(), ch(2));
+        assert_eq!(result_3.number(), u14(421));
+        assert_eq!(result_3.value(), u14(126));
         assert!(!result_3.is_registered());
         assert!(!result_3.is_14_bit());
     }
@@ -217,17 +217,17 @@ mod tests {
         assert_eq!(result_3, None);
         assert_eq!(result_5, None);
         let result_7 = result_7.unwrap();
-        assert_eq!(result_7.get_channel(), ch(0));
-        assert_eq!(result_7.get_number(), u14(420));
-        assert_eq!(result_7.get_value(), u14(15000));
+        assert_eq!(result_7.channel(), ch(0));
+        assert_eq!(result_7.number(), u14(420));
+        assert_eq!(result_7.value(), u14(15000));
         assert!(result_7.is_registered());
         assert!(result_7.is_14_bit());
         assert_eq!(result_2, None);
         assert_eq!(result_4, None);
         let result_6 = result_6.unwrap();
-        assert_eq!(result_6.get_channel(), ch(2));
-        assert_eq!(result_6.get_number(), u14(421));
-        assert_eq!(result_6.get_value(), u14(126));
+        assert_eq!(result_6.channel(), ch(2));
+        assert_eq!(result_6.number(), u14(421));
+        assert_eq!(result_6.value(), u14(126));
         assert!(!result_6.is_registered());
         assert!(!result_6.is_14_bit());
     }
@@ -247,9 +247,9 @@ mod tests {
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
         let result_3 = result_3.unwrap();
-        assert_eq!(result_3.get_channel(), ch(2));
-        assert_eq!(result_3.get_number(), u14(421));
-        assert_eq!(result_3.get_value(), u14(126));
+        assert_eq!(result_3.channel(), ch(2));
+        assert_eq!(result_3.number(), u14(421));
+        assert_eq!(result_3.value(), u14(126));
         assert!(!result_3.is_registered());
         assert!(!result_3.is_14_bit());
     }

@@ -75,15 +75,15 @@ impl MidiParameterNumberMessage {
         }
     }
 
-    pub fn get_channel(&self) -> Channel {
+    pub fn channel(&self) -> Channel {
         self.channel
     }
 
-    pub fn get_number(&self) -> U14 {
+    pub fn number(&self) -> U14 {
         self.number
     }
 
-    pub fn get_value(&self) -> U14 {
+    pub fn value(&self) -> U14 {
         self.value
     }
 
@@ -156,9 +156,9 @@ mod tests {
         let msg = MidiParameterNumberMessage::registered_14_bit(ch(0), u14(420), u14(15000));
         // When
         // Then
-        assert_eq!(msg.get_channel(), ch(0));
-        assert_eq!(msg.get_number(), u14(420));
-        assert_eq!(msg.get_value(), u14(15000));
+        assert_eq!(msg.channel(), ch(0));
+        assert_eq!(msg.number(), u14(420));
+        assert_eq!(msg.value(), u14(15000));
         assert!(msg.is_14_bit());
         assert!(msg.is_registered());
         let midi_msgs: [Option<RawMidiMessage>; 4] = msg.build_midi_messages();
@@ -185,9 +185,9 @@ mod tests {
         let msg = MidiParameterNumberMessage::non_registered_7_bit(ch(2), u14(421), u7(126));
         // When
         // Then
-        assert_eq!(msg.get_channel(), ch(2));
-        assert_eq!(msg.get_number(), u14(421));
-        assert_eq!(msg.get_value(), u14(126));
+        assert_eq!(msg.channel(), ch(2));
+        assert_eq!(msg.number(), u14(421));
+        assert_eq!(msg.value(), u14(126));
         assert!(!msg.is_14_bit());
         assert!(!msg.is_registered());
         let midi_msgs: [Option<RawMidiMessage>; 4] = msg.build_midi_messages();

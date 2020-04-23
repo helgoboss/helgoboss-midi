@@ -118,7 +118,7 @@ impl ControllerNumber {
         self.0 < 32
     }
 
-    pub fn get_corresponding_14_bit_lsb(&self) -> Result<ControllerNumber, ()> {
+    pub fn corresponding_14_bit_lsb(&self) -> Result<ControllerNumber, ()> {
         if !self.can_act_as_14_bit_msb() {
             return Err(());
         }

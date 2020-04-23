@@ -18,15 +18,15 @@ impl MidiMessageFactory for RawMidiMessage {
 }
 
 impl MidiMessage for RawMidiMessage {
-    fn get_status_byte(&self) -> u8 {
+    fn status_byte(&self) -> u8 {
         self.status_byte
     }
 
-    fn get_data_byte_1(&self) -> U7 {
+    fn data_byte_1(&self) -> U7 {
         self.data_byte_1
     }
 
-    fn get_data_byte_2(&self) -> U7 {
+    fn data_byte_2(&self) -> U7 {
         self.data_byte_2
     }
 }
