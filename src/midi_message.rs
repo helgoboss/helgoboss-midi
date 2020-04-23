@@ -38,7 +38,41 @@ pub trait MidiMessage {
     }
 
     fn get_super_type(&self) -> MidiMessageSuperType {
-        self.get_type().get_super_type()
+        use MidiMessageSuperType::*;
+        use MidiMessageType::*;
+        match self.get_type() {
+            NoteOn
+            | NoteOff
+            | ChannelPressure
+            | PolyphonicKeyPressure
+            | PitchBendChange
+            | ProgramChange => ChannelVoice,
+            ControlChange => {
+                if ControllerNumber::from(self.get_data_byte_1())
+                    < ControllerNumber::LOCAL_CONTROL_ON_OFF
+                {
+                    ChannelVoice
+                } else {
+                    ChannelMode
+                }
+            }
+            TimingClock
+            | SystemRealTimeUndefined1
+            | Start
+            | Continue
+            | Stop
+            | SystemRealTimeUndefined2
+            | ActiveSensing
+            | SystemReset => SystemRealTime,
+            MidiTimeCodeQuarterFrame
+            | SongPositionPointer
+            | SongSelect
+            | SystemCommonUndefined1
+            | SystemCommonUndefined2
+            | TuneRequest
+            | SystemExclusiveEnd => SystemCommon,
+            SystemExclusiveStart => SystemExclusive,
+        }
     }
 
     fn get_main_category(&self) -> MidiMessageMainCategory {
@@ -203,7 +237,6 @@ pub trait MidiMessage {
 // The most low-level type of a MIDI message
 #[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive, EnumIter)]
 #[repr(u8)]
-// TODO Page 35 of MIDI spec PDF contains good classification
 pub enum MidiMessageType {
     // Channel messages = channel voice messages + channel mode messages (given value represents
     // channel 0 status byte)
@@ -236,7 +269,8 @@ pub enum MidiMessageType {
 }
 
 impl MidiMessageType {
-    pub fn get_super_type(&self) -> MidiMessageSuperType {
+    pub fn get_super_type(&self) -> BlurryMidiMessageSuperType {
+        use BlurryMidiMessageSuperType::*;
         use MidiMessageType::*;
         match self {
             NoteOn
@@ -245,7 +279,7 @@ impl MidiMessageType {
             | PolyphonicKeyPressure
             | PitchBendChange
             | ProgramChange
-            | ControlChange => MidiMessageSuperType::Channel,
+            | ControlChange => Channel,
             TimingClock
             | SystemRealTimeUndefined1
             | Start
@@ -253,15 +287,15 @@ impl MidiMessageType {
             | Stop
             | SystemRealTimeUndefined2
             | ActiveSensing
-            | SystemReset => MidiMessageSuperType::SystemRealTime,
+            | SystemReset => SystemRealTime,
             MidiTimeCodeQuarterFrame
             | SongPositionPointer
             | SongSelect
             | SystemCommonUndefined1
             | SystemCommonUndefined2
             | TuneRequest
-            | SystemExclusiveEnd => MidiMessageSuperType::SystemCommon,
-            SystemExclusiveStart => MidiMessageSuperType::SystemExclusive,
+            | SystemExclusiveEnd => SystemCommon,
+            SystemExclusiveStart => SystemExclusive,
         }
     }
 }
@@ -271,20 +305,41 @@ impl MidiMessageType {
 // difference doesn't solely depend on the MidiMessageType (channel mode messages are just
 // particular ControlChange messages).
 #[derive(Clone, Copy, Debug, Eq, PartialEq)]
-pub enum MidiMessageSuperType {
-    // TODO Distinguish between ChannelMode and ChannelVoice
+pub enum BlurryMidiMessageSuperType {
     Channel,
     SystemCommon,
     SystemRealTime,
     SystemExclusive,
 }
 
+// A somewhat mid-level type of a MIDI message.
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum MidiMessageSuperType {
+    ChannelVoice,
+    ChannelMode,
+    SystemCommon,
+    SystemRealTime,
+    SystemExclusive,
+}
+
+impl BlurryMidiMessageSuperType {
+    pub fn get_main_category(&self) -> MidiMessageMainCategory {
+        use MidiMessageMainCategory::*;
+        if *self == BlurryMidiMessageSuperType::Channel {
+            Channel
+        } else {
+            System
+        }
+    }
+}
+
 impl MidiMessageSuperType {
     pub fn get_main_category(&self) -> MidiMessageMainCategory {
-        if *self == MidiMessageSuperType::Channel {
-            MidiMessageMainCategory::Channel
-        } else {
-            MidiMessageMainCategory::System
+        use MidiMessageMainCategory::*;
+        use MidiMessageSuperType::*;
+        match *self {
+            ChannelMode | ChannelVoice => Channel,
+            SystemCommon | SystemRealTime | SystemExclusive => System,
         }
     }
 }
@@ -421,7 +476,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(64));
         assert_eq!(msg.get_data_byte_2(), u7(100));
         assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), Some(key_number(64)));
@@ -463,7 +518,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(64));
         assert_eq!(msg.get_data_byte_2(), u7(100));
         assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), Some(key_number(64)));
@@ -496,7 +551,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(125));
         assert_eq!(msg.get_data_byte_2(), u7(70));
         assert_eq!(msg.get_type(), MidiMessageType::NoteOff);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(2)));
         assert_eq!(msg.get_key_number(), Some(key_number(125)));
@@ -529,7 +584,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(5));
         assert_eq!(msg.get_data_byte_2(), u7(0));
         assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(0)));
         assert_eq!(msg.get_key_number(), Some(key_number(5)));
@@ -562,7 +617,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(50));
         assert_eq!(msg.get_data_byte_2(), u7(2));
         assert_eq!(msg.get_type(), MidiMessageType::ControlChange);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), None);
@@ -595,7 +650,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(22));
         assert_eq!(msg.get_data_byte_2(), u7(0));
         assert_eq!(msg.get_type(), MidiMessageType::ProgramChange);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(4)));
         assert_eq!(msg.get_key_number(), None);
@@ -627,7 +682,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(127));
         assert_eq!(msg.get_data_byte_2(), u7(50));
         assert_eq!(msg.get_type(), MidiMessageType::PolyphonicKeyPressure);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(15)));
         assert_eq!(msg.get_key_number(), Some(key_number(127)));
@@ -660,7 +715,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(0));
         assert_eq!(msg.get_data_byte_2(), u7(0));
         assert_eq!(msg.get_type(), MidiMessageType::ChannelPressure);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(14)));
         assert_eq!(msg.get_key_number(), None);
@@ -692,7 +747,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(126));
         assert_eq!(msg.get_data_byte_2(), u7(9));
         assert_eq!(msg.get_type(), MidiMessageType::PitchBendChange);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), None);
@@ -886,7 +941,7 @@ mod tests {
         assert_eq!(msg.get_data_byte_1(), u7(64));
         assert_eq!(msg.get_data_byte_2(), u7(100));
         assert_eq!(msg.get_type(), MidiMessageType::NoteOn);
-        assert_eq!(msg.get_super_type(), MidiMessageSuperType::Channel);
+        assert_eq!(msg.get_super_type(), MidiMessageSuperType::ChannelVoice);
         assert_eq!(msg.get_main_category(), MidiMessageMainCategory::Channel);
         assert_eq!(msg.get_channel(), Some(ch(1)));
         assert_eq!(msg.get_key_number(), Some(key_number(64)));
@@ -907,10 +962,10 @@ mod tests {
         // Given
         let messages: Vec<RawMidiMessage> = MidiMessageType::iter()
             .flat_map(move |t| match t.get_super_type() {
-                MidiMessageSuperType::Channel => (0..Channel::COUNT)
+                BlurryMidiMessageSuperType::Channel => (0..Channel::COUNT)
                     .map(|c| RawMidiMessage::channel_message(t, ch(c), U7::MIN, U7::MIN))
                     .collect(),
-                MidiMessageSuperType::SystemRealTime => {
+                BlurryMidiMessageSuperType::SystemRealTime => {
                     vec![RawMidiMessage::system_real_time_message(t)]
                 }
                 _ => vec![],

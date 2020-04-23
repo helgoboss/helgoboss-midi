@@ -1,7 +1,7 @@
 use crate::{
-    build_status_byte, get_midi_message_type_from_status_byte, Channel, ControllerNumber,
-    KeyNumber, MidiMessage, MidiMessageMainCategory, MidiMessageSuperType, MidiMessageType,
-    MidiTimeCodeQuarterFrame, StructuredMidiMessage, U14, U4, U7,
+    build_status_byte, get_midi_message_type_from_status_byte, BlurryMidiMessageSuperType, Channel,
+    ControllerNumber, KeyNumber, MidiMessage, MidiMessageMainCategory, MidiMessageSuperType,
+    MidiMessageType, MidiTimeCodeQuarterFrame, StructuredMidiMessage, U14, U4, U7,
 };
 
 /// Trait to be implemented by struct representing a MIDI message if it supports creation of various
@@ -33,24 +33,24 @@ pub trait MidiMessageFactory: Sized {
     }
 
     fn channel_message(r#type: MidiMessageType, channel: Channel, data_1: U7, data_2: U7) -> Self {
-        assert_eq!(
-            r#type.get_super_type().get_main_category(),
-            MidiMessageMainCategory::Channel
-        );
+        assert_eq!(r#type.get_super_type(), BlurryMidiMessageSuperType::Channel);
         unsafe {
             Self::from_bytes_unchecked(build_status_byte(r#type.into(), channel), data_1, data_2)
         }
     }
 
     fn system_common_message(r#type: MidiMessageType, data_1: U7, data_2: U7) -> Self {
-        assert_eq!(r#type.get_super_type(), MidiMessageSuperType::SystemCommon);
+        assert_eq!(
+            r#type.get_super_type(),
+            BlurryMidiMessageSuperType::SystemCommon
+        );
         unsafe { Self::from_bytes_unchecked(r#type.into(), data_1, data_2) }
     }
 
     fn system_real_time_message(r#type: MidiMessageType) -> Self {
         assert_eq!(
             r#type.get_super_type(),
-            MidiMessageSuperType::SystemRealTime
+            BlurryMidiMessageSuperType::SystemRealTime
         );
         unsafe { Self::from_bytes_unchecked(r#type.into(), U7::MIN, U7::MIN) }
     }
