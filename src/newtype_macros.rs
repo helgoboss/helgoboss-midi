@@ -1,4 +1,5 @@
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
+// TODO Consider into_inner() method (https://rust-lang.github.io/api-guidelines/naming.html#c-case)
 macro_rules! newtype {
     ($name: ident, $repr: ty, $max: literal, $factory: ident) => {
         #[derive(Copy, Clone, Debug, Default, Eq, Hash, PartialEq, PartialOrd, Ord)]
