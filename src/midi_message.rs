@@ -234,7 +234,19 @@ pub trait MidiMessage {
 }
 
 // The most low-level type of a MIDI message
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive, EnumIter)]
+#[derive(
+    Copy,
+    Clone,
+    Eq,
+    PartialEq,
+    Ord,
+    PartialOrd,
+    Hash,
+    Debug,
+    IntoPrimitive,
+    TryFromPrimitive,
+    EnumIter,
+)]
 #[repr(u8)]
 pub enum MidiMessageType {
     // Channel messages = channel voice messages + channel mode messages (given value represents
@@ -303,7 +315,7 @@ impl MidiMessageType {
 // In this enum we don't distinguish between channel voice and channel mode messages because this
 // difference doesn't solely depend on the MidiMessageType (channel mode messages are just
 // particular ControlChange messages).
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum BlurryMidiMessageSuperType {
     Channel,
     SystemCommon,
@@ -312,7 +324,7 @@ pub enum BlurryMidiMessageSuperType {
 }
 
 // A somewhat mid-level type of a MIDI message.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum MidiMessageSuperType {
     ChannelVoice,
     ChannelMode,
@@ -344,14 +356,14 @@ impl MidiMessageSuperType {
 }
 
 // The MIDI spec says: "Messages are divided into two main categories: Channel and System."
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum MidiMessageMainCategory {
     Channel,
     System,
 }
 
 /// Content of a MIDI time code quarter frame message. It contains a part of the current time code.
-#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum MidiTimeCodeQuarterFrame {
     FrameCountLsNibble(U4),
     FrameCountMsNibble(U4),
@@ -415,7 +427,9 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
 }
 
 /// Time code type contained in the last quarter frame message
-#[derive(Clone, Copy, Debug, Eq, PartialEq, IntoPrimitive, TryFromPrimitive)]
+#[derive(
+    Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, IntoPrimitive, TryFromPrimitive,
+)]
 #[repr(u8)]
 pub enum TimeCodeType {
     Fps24 = 0,

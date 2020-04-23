@@ -9,7 +9,7 @@ use crate::{
 /// usage via pattern matching. For that reason each variant is a struct-like enum, which is ideal
 /// for pattern matching while it is less ideal for reuse (the data contained in the variant can't
 /// be passed around in one piece).
-#[derive(Clone, Debug, Eq, PartialEq)]
+#[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 pub enum StructuredMidiMessage {
     // Channel messages
     NoteOff {
