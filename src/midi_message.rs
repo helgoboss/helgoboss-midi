@@ -5,6 +5,8 @@ use crate::{
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
+#[cfg(feature = "serde")]
+use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::convert::TryInto;
 #[allow(unused_imports)]
 use strum::IntoEnumIterator;
@@ -34,7 +36,7 @@ pub trait MidiMessage {
     fn data_byte_2(&self) -> U7;
 
     fn r#type(&self) -> MidiMessageType {
-        midi_message_type_from_status_byte(self.status_byte()).unwrap()
+        extract_type_from_status_byte(self.status_byte()).unwrap()
     }
 
     fn super_type(&self) -> MidiMessageSuperType {
@@ -248,7 +250,7 @@ pub trait MidiMessage {
     TryFromPrimitive,
     EnumIter,
 )]
-#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+#[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
 pub enum MidiMessageType {
     // Channel messages = channel voice messages + channel mode messages (given value represents
@@ -446,7 +448,7 @@ fn extract_channel_from_status_byte(byte: u8) -> Channel {
     Channel(byte & 0x0f)
 }
 
-pub(crate) fn midi_message_type_from_status_byte(
+pub(crate) fn extract_type_from_status_byte(
     status_byte: u8,
 ) -> Result<MidiMessageType, TryFromPrimitiveError<MidiMessageType>> {
     let high_status_byte_nibble = extract_high_nibble_from_byte(status_byte);
@@ -479,6 +481,9 @@ mod tests {
     use super::*;
     use crate::test_util::{channel as ch, controller_number, key_number, u14, u7};
     use crate::{Channel, MidiMessageFactory, RawMidiMessage};
+    #[cfg(feature = "serde")]
+    use serde_json::json;
+    use std::any::Any;
 
     #[test]
     fn from_bytes_ok() {
@@ -969,6 +974,60 @@ mod tests {
         assert!(msg.is_note());
         assert!(msg.is_note_on());
         assert!(!msg.is_note_off());
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn structured_serialize() {
+        // Given
+        let msg = StructuredMidiMessage::from_bytes(145, u7(64), u7(100)).unwrap();
+        // When
+        let j = serde_json::to_value(&msg).unwrap();
+        // Then
+        assert_eq!(
+            j,
+            json! {
+                {
+                    "NoteOn": {
+                        "channel": 1,
+                        "key_number": 64,
+                        "velocity": 100
+                    }
+                }
+            }
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn raw_serialize() {
+        // Given
+        let msg = RawMidiMessage::from_bytes(145, u7(64), u7(100)).unwrap();
+        // When
+        let j = serde_json::to_value(&msg).unwrap();
+        // Then
+        assert_eq!(
+            j,
+            json! {
+                [145, 64, 100]
+            }
+        );
+    }
+
+    #[cfg(feature = "serde")]
+    #[test]
+    fn type_serialize() {
+        // Given
+        let r#type = RawMidiMessage::note_on(ch(4), key_number(50), u7(100)).r#type();
+        // When
+        let j = serde_json::to_value(&r#type).unwrap();
+        // Then
+        assert_eq!(
+            j,
+            json! {
+                144
+            }
+        );
     }
 
     #[test]
