@@ -58,6 +58,12 @@ impl MidiControlChange14BitMessage {
     }
 }
 
+impl<T: MidiMessageFactory> From<MidiControlChange14BitMessage> for [T; 2] {
+    fn from(msg: MidiControlChange14BitMessage) -> Self {
+        msg.build_midi_messages()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;

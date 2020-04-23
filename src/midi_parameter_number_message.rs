@@ -144,6 +144,12 @@ impl MidiParameterNumberMessage {
     }
 }
 
+impl<T: MidiMessageFactory> From<MidiParameterNumberMessage> for [Option<T>; 4] {
+    fn from(msg: MidiParameterNumberMessage) -> Self {
+        msg.build_midi_messages()
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
