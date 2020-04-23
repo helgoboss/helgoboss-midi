@@ -2,7 +2,11 @@
 // TODO Consider into_inner() method (https://rust-lang.github.io/api-guidelines/naming.html#c-case)
 macro_rules! newtype {
     ($name: ident, $repr: ty, $max: literal, $factory: ident) => {
+        #[cfg(feature = "serde")]
+        use serde::{Deserialize, Serialize};
+
         #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub struct $name(pub(crate) $repr);
 
         impl $name {

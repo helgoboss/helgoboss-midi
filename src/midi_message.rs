@@ -3,11 +3,12 @@ use crate::{
     StructuredMidiMessage, U14, U4, U7,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 use std::convert::TryInto;
 #[allow(unused_imports)]
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
-
 /// Trait to be implemented by struct representing a single primitive MIDI message. Only the three
 /// byte-returning methods need to be implemented, the rest is done by default methods. The
 /// advantage of this architecture is that we can have a unified API, no matter which underlying
@@ -247,6 +248,7 @@ pub trait MidiMessage {
     TryFromPrimitive,
     EnumIter,
 )]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(u8)]
 pub enum MidiMessageType {
     // Channel messages = channel voice messages + channel mode messages (given value represents
@@ -364,6 +366,7 @@ pub enum MidiMessageMainCategory {
 
 /// Content of a MIDI time code quarter frame message. It contains a part of the current time code.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MidiTimeCodeQuarterFrame {
     FrameCountLsNibble(U4),
     FrameCountMsNibble(U4),
@@ -430,6 +433,7 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
 #[derive(
     Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, IntoPrimitive, TryFromPrimitive,
 )]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 #[repr(u8)]
 pub enum TimeCodeType {
     Fps24 = 0,

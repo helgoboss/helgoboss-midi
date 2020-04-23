@@ -3,6 +3,8 @@ use crate::{
     extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber, MidiMessage,
     MidiMessageFactory, MidiMessageType, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U7,
 };
+#[cfg(feature = "serde")]
+use serde::{Deserialize, Serialize};
 
 /// MIDI message implemented as an enum where each variant contains exactly the data which is
 /// relevant for the particular MIDI message type. This enum is primarily intended for read-only
@@ -10,6 +12,7 @@ use crate::{
 /// for pattern matching while it is less ideal for reuse (the data contained in the variant can't
 /// be passed around in one piece).
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum StructuredMidiMessage {
     // Channel messages
     NoteOff {
