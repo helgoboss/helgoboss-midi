@@ -1,6 +1,5 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, extract_high_7_bit_value_from_14_bit_value,
-    extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber,
+    build_14_bit_value_from_two_7_bit_values, Channel, ControllerNumber, KeyNumber,
     StructuredMidiMessage, U14, U4, U7,
 };
 use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
@@ -407,7 +406,7 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
             5 => MinutesCountMsNibble(extract_low_nibble_from_byte(data)),
             6 => HoursCountLsNibble(extract_low_nibble_from_byte(data)),
             7 => {
-                use TimeCodeType::*;
+                
                 Last {
                     hours_count_ms_bit: (data & 0b0000001) != 0,
                     time_code_type: ((data & 0b0000110) >> 1).try_into().unwrap(),

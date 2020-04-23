@@ -1,7 +1,7 @@
 use crate::{
     build_status_byte, extract_high_7_bit_value_from_14_bit_value,
     extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber, MidiMessage,
-    MidiMessageFactory, MidiMessageType, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U4, U7,
+    MidiMessageFactory, MidiMessageType, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U7,
 };
 
 /// MIDI message implemented as an enum where each variant contains exactly the data which is
@@ -172,7 +172,7 @@ impl MidiMessage for StructuredMidiMessage {
                 pitch_bend_value, ..
             } => extract_high_7_bit_value_from_14_bit_value(*pitch_bend_value),
             SystemExclusiveStart => U7::MIN,
-            MidiTimeCodeQuarterFrame(frame) => U7::MIN,
+            MidiTimeCodeQuarterFrame(_) => U7::MIN,
             SongPositionPointer { position } => {
                 extract_high_7_bit_value_from_14_bit_value(*position)
             }

@@ -1,7 +1,7 @@
 use crate::{
     build_status_byte, get_midi_message_type_from_status_byte, BlurryMidiMessageSuperType, Channel,
-    ControllerNumber, KeyNumber, MidiMessage, MidiMessageMainCategory, MidiMessageSuperType,
-    MidiMessageType, MidiTimeCodeQuarterFrame, StructuredMidiMessage, U14, U4, U7,
+    ControllerNumber, KeyNumber, MidiMessage, MidiMessageType, MidiTimeCodeQuarterFrame,
+    StructuredMidiMessage, U14, U7,
 };
 
 /// Trait to be implemented by struct representing a MIDI message if it supports creation of various
