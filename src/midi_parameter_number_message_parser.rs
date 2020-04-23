@@ -3,15 +3,14 @@ use crate::{
     StructuredMidiMessage, U7,
 };
 
+#[derive(Default)]
 pub struct MidiParameterNumberMessageParser {
     parser_by_channel: [ParserForOneChannel; Channel::COUNT as usize],
 }
 
 impl MidiParameterNumberMessageParser {
     pub fn new() -> MidiParameterNumberMessageParser {
-        MidiParameterNumberMessageParser {
-            parser_by_channel: [ParserForOneChannel::new(); Channel::COUNT as usize],
-        }
+        Default::default()
     }
 
     pub fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiParameterNumberMessage> {
@@ -26,7 +25,7 @@ impl MidiParameterNumberMessageParser {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 struct ParserForOneChannel {
     number_msb: Option<U7>,
     number_lsb: Option<U7>,
@@ -35,15 +34,6 @@ struct ParserForOneChannel {
 }
 
 impl ParserForOneChannel {
-    fn new() -> ParserForOneChannel {
-        ParserForOneChannel {
-            number_msb: None,
-            number_lsb: None,
-            is_registered: false,
-            value_lsb: None,
-        }
-    }
-
     fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiParameterNumberMessage> {
         match msg.to_structured() {
             StructuredMidiMessage::ControlChange {

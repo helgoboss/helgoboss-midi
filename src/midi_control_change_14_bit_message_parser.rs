@@ -3,15 +3,14 @@ use crate::{
     MidiControlChange14BitMessage, MidiMessage, StructuredMidiMessage, U7,
 };
 
+#[derive(Default)]
 pub struct MidiControlChange14BitMessageParser {
     parser_by_channel: [ParserForOneChannel; Channel::COUNT as usize],
 }
 
 impl MidiControlChange14BitMessageParser {
     pub fn new() -> MidiControlChange14BitMessageParser {
-        MidiControlChange14BitMessageParser {
-            parser_by_channel: [ParserForOneChannel::new(); Channel::COUNT as usize],
-        }
+        Default::default()
     }
 
     pub fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiControlChange14BitMessage> {
@@ -26,20 +25,13 @@ impl MidiControlChange14BitMessageParser {
     }
 }
 
-#[derive(Clone, Copy)]
+#[derive(Default, Clone, Copy)]
 struct ParserForOneChannel {
     msb_controller_number: Option<ControllerNumber>,
     value_msb: Option<U7>,
 }
 
 impl ParserForOneChannel {
-    fn new() -> ParserForOneChannel {
-        ParserForOneChannel {
-            msb_controller_number: None,
-            value_msb: None,
-        }
-    }
-
     fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiControlChange14BitMessage> {
         match msg.to_structured() {
             StructuredMidiMessage::ControlChange {
