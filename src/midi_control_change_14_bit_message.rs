@@ -42,7 +42,7 @@ impl MidiControlChange14BitMessage {
         self.value
     }
 
-    pub fn build_midi_messages<T: MidiMessageFactory>(&self) -> [T; 2] {
+    pub fn to_midi_messages<T: MidiMessageFactory>(&self) -> [T; 2] {
         [
             T::control_change(
                 self.channel,
@@ -60,7 +60,7 @@ impl MidiControlChange14BitMessage {
 
 impl<T: MidiMessageFactory> From<MidiControlChange14BitMessage> for [T; 2] {
     fn from(msg: MidiControlChange14BitMessage) -> Self {
-        msg.build_midi_messages()
+        msg.to_midi_messages()
     }
 }
 
@@ -80,7 +80,7 @@ mod tests {
         assert_eq!(msg.msb_controller_number(), cn(2));
         assert_eq!(msg.lsb_controller_number(), cn(34));
         assert_eq!(msg.value(), u14(1057));
-        let midi_msgs: [RawMidiMessage; 2] = msg.build_midi_messages();
+        let midi_msgs: [RawMidiMessage; 2] = msg.to_midi_messages();
         assert_eq!(
             midi_msgs,
             [

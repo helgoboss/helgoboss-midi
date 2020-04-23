@@ -96,7 +96,7 @@ impl MidiParameterNumberMessage {
     }
 
     // If not 14-bit, this returns only 3 messages (the last one is None)
-    pub fn build_midi_messages<T: MidiMessageFactory>(&self) -> [Option<T>; 4] {
+    pub fn to_midi_messages<T: MidiMessageFactory>(&self) -> [Option<T>; 4] {
         let mut messages = [None, None, None, None];
         let mut i = 0;
         // Number MSB
@@ -146,7 +146,7 @@ impl MidiParameterNumberMessage {
 
 impl<T: MidiMessageFactory> From<MidiParameterNumberMessage> for [Option<T>; 4] {
     fn from(msg: MidiParameterNumberMessage) -> Self {
-        msg.build_midi_messages()
+        msg.to_midi_messages()
     }
 }
 
@@ -167,7 +167,7 @@ mod tests {
         assert_eq!(msg.value(), u14(15000));
         assert!(msg.is_14_bit());
         assert!(msg.is_registered());
-        let midi_msgs: [Option<RawMidiMessage>; 4] = msg.build_midi_messages();
+        let midi_msgs: [Option<RawMidiMessage>; 4] = msg.to_midi_messages();
         assert_eq!(
             midi_msgs,
             [
@@ -196,7 +196,7 @@ mod tests {
         assert_eq!(msg.value(), u14(126));
         assert!(!msg.is_14_bit());
         assert!(!msg.is_registered());
-        let midi_msgs: [Option<RawMidiMessage>; 4] = msg.build_midi_messages();
+        let midi_msgs: [Option<RawMidiMessage>; 4] = msg.to_midi_messages();
         assert_eq!(
             midi_msgs,
             [
