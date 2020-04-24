@@ -2,7 +2,13 @@
 name = "helgoboss-midi"
 version = "0.1.0"
 authors = ["Benjamin Klum <benjamin.klum@helgoboss.org>"]
+license = "MIT"
+description = "Data structures and utilities for dealing with MIDI messages according to MIDI 1.0 spec"
+repository = "https://github.com/helgoboss/helgoboss-midi-rs"
+readme = "README.md"
+keywords = ["midi"]
 edition = "2018"
+categories = ["data-structures", "multimedia"]
 
 [dependencies]
 num_enum = "0.4.2"
