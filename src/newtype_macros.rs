@@ -22,31 +22,44 @@ macro_rules! newtype {
         pub struct $name(pub(crate) $repr);
 
         impl $name {
-            pub const MIN: Self = Self(0);
+            /// The smallest value that can be represented by this type.
+            pub const MIN: $name = $name(0);
 
-            pub const MAX: Self = Self($max);
+            /// The largest value that can be represented by this type.
+            pub const MAX: $name = $name($max);
 
             fn is_valid<T: PartialOrd + From<$repr>>(number: T) -> bool {
                 number <= $max.into()
             }
 
-            /// Panics if given number is greater than MAX!
-            //
-            // - Okay to panic here if we document the preconditions. Also used in example at https://doc.rust-lang.org/book/ch09-03-to-panic-or-not-to-panic.html
-            // - NonZeroU8's new returns an Option, but that's probably pre-TryFrom era
-            // - Not having a new() at all is probably not a good idea because new() is what most
-            //   people look for first (C-CTOR convention)
-            pub fn new(number: $repr) -> Self {
-                assert!(Self::is_valid(number));
-                Self(number)
+            doc_comment::doc_comment! {
+                concat!(
+"Creates a ", stringify!($name), ".
+
+# Panics
+
+This function panics if `value` is greater than ", $max, "."
+                ),
+                pub fn new(value: $repr) -> $name {
+                    assert!($name::is_valid(value));
+                    $name(value)
+                }
             }
 
-            // This is good practice
-            pub const unsafe fn new_unchecked(number: $repr) -> Self {
-                Self(number)
+            doc_comment::doc_comment! {
+                concat!(
+"Creates a ", stringify!($name), " without checking `value`.
+
+# Safety
+
+`value` must not be greater than ", $max, "."
+                ),
+                pub const unsafe fn new_unchecked(value: $repr) -> $name {
+                    $name(value)
+                }
             }
 
-            // This aligns with C-GETTER convention and to std::num::NonZeroU8
+            /// Returns the value as a primitive type.
             pub fn get(self) -> $repr {
                 self.0
             }

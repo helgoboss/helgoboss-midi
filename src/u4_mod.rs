@@ -1,5 +1,8 @@
 // Basic newtype definition
-newtype!(name = U4, repr = u8, max = 15);
+newtype! {
+    #[doc = r"A 4-bit integer (0 - 15)."]
+    name = U4, repr = u8, max = 15
+}
 
 // From lower newtypes to this newtype
 // -

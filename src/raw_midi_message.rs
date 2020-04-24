@@ -2,7 +2,7 @@ use crate::{MidiMessage, MidiMessageFactory, U7};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-// TODO Implement From in both directions
+/// A single MIDI message implemented as a tuple of bytes.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RawMidiMessage(u8, U7, U7);

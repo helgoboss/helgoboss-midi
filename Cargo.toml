@@ -3,7 +3,7 @@ name = "helgoboss-midi"
 version = "0.1.0"
 authors = ["Benjamin Klum <benjamin.klum@helgoboss.org>"]
 license = "MIT"
-description = "Data structures and utilities for dealing with MIDI messages according to MIDI 1.0 spec"
+description = "Data structures and utilities for dealing with MIDI messages according to the MIDI 1.0 specification"
 repository = "https://github.com/helgoboss/helgoboss-midi-rs"
 readme = "README.md"
 keywords = ["midi"]
@@ -15,6 +15,7 @@ num_enum = "0.4.2"
 derive_more = "0.99.5"
 serde = { version = "1.0", optional = true, features = ["derive"] }
 serde_repr = { version = "0.1.5", optional = true }
+doc-comment = "0.3.3"
 
 [dev-dependencies]
 serde_json = "1.0"

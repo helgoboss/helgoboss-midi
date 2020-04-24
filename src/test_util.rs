@@ -1,4 +1,10 @@
-//! Convenience methods for creating messages with minimum boilerplate, intended to be used in tests
+//! Contains convenience functions for creating messages with minimum boilerplate, intended to be
+//! used in test or demo code.
+//!
+//! # Panics
+//!
+//! Most of the functions contained in this module panic if a passed value doesn't conform to the
+//! value range of the corresponding type.
 use crate::{
     Channel, ControllerNumber, KeyNumber, MidiControlChange14BitMessage, MidiMessageFactory,
     MidiParameterNumberMessage, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U4, U7,

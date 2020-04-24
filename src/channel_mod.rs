@@ -1,7 +1,7 @@
 // Basic newtype definition
 
 newtype! {
-    #[doc = r" Channel"]
+    #[doc = r"A MIDI channel (0 - 15)."]
     name = Channel, repr = u8, max = 15
 }
 

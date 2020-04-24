@@ -7,10 +7,10 @@ use crate::{
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// MIDI message implemented as an enum where each variant contains exactly the data which is
-/// relevant for the particular MIDI message type. This enum is primarily intended for read-only
-/// usage via pattern matching. For that reason each variant is a struct-like enum, which is ideal
-/// for pattern matching while it is less ideal for reuse (the data contained in the variant can't
+/// A single MIDI message implemented as an enum where each variant contains exactly the data which
+/// is relevant for the particular message type. This enum is primarily intended for read-only usage
+/// via pattern matching. For that reason each variant is a struct-like enum, which is ideal for
+/// pattern matching while it is less ideal for reuse (the data contained in the variant can't
 /// be passed around in one piece).
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
@@ -48,9 +48,9 @@ pub enum StructuredMidiMessage {
         channel: Channel,
         pitch_bend_value: U14,
     },
-    // System exclusive messages
+    // System Exclusive messages
     SystemExclusiveStart,
-    // System common messages
+    // System Common messages
     MidiTimeCodeQuarterFrame(MidiTimeCodeQuarterFrame),
     SongPositionPointer {
         position: U14,
@@ -60,7 +60,7 @@ pub enum StructuredMidiMessage {
     },
     TuneRequest,
     SystemExclusiveEnd,
-    // System real-time messages
+    // System Real Time messages
     TimingClock,
     Start,
     Continue,
@@ -251,7 +251,7 @@ impl MidiMessage for StructuredMidiMessage {
         }
     }
 
-    // Optimization
+    // Slight optimization
     fn to_structured(&self) -> StructuredMidiMessage {
         self.clone()
     }

@@ -10,49 +10,69 @@ use serde::{Deserialize, Serialize};
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::convert::{TryFrom, TryInto};
 
-/// Trait to be implemented by struct representing a single primitive MIDI message. Only the three
-/// byte-returning methods need to be implemented, the rest is done by default methods. The
-/// advantage of this architecture is that we can have a unified API, no matter which underlying
-/// data structure is used.
+/// A single MIDI message made up by a maximum of 3 bytes.
 ///
-/// This trait is just for primitive MIDI messages, that is messages which use 3 bytes at a
-/// maximum. It can't represent messages which are longer than 3 bytes, e.g. it can't be used to
-/// represent a complete sys-ex message. This is by design. One main advantage is that
-/// any implementation of this trait can easily implement Copy, which is essential if you want to
-/// pass around messages by copying them instead of dealing with references. MIDI messages are
-/// often processed in a real-time thread where things need to happen fast and heap allocations
-/// are a no-go. If we would make this trait support arbitrarily-sized messages, we would lose Copy
-/// and would have to make everything work with references or pointers - which can bring its
-/// own restrictions such as not being able to use rxRust in a safe way.
+/// This trait is supposed to be implemented for structs that represent a single MIDI message. Only
+/// the three byte-returning methods need to be implemented, the rest is done by default methods.
 ///
-/// Please also implement the trait `MidiMessageFactory` for your struct if creating new MIDI
-/// messages programmatically should be supported.
+/// Please also implement the trait [`MidiMessageFactory`] for your struct if creating new MIDI
+/// messages should be supported.
+///
+/// # Design
+///
+/// The advantage of using a trait is that a unified API can be used to work with MIDI messages - no
+/// matter the underlying data structure. This crate comes with the "no-fuzz" implementation
+/// [`RawMidiMessage`] and the match-friendly implementation [`StructuredMidiMessage`].
+///
+/// This trait is not designed to represent messages that are longer than 3 bytes, such as complete
+/// System Exclusive messages. One implication is that implementations of this trait can easily get
+/// by without doing heap allocations. This is important because MIDI messages are often processed
+/// in a real-time thread where things need to happen fast and heap allocations are a no-go. Also,
+/// implementations can be made copyable just by deriving `Copy`, which is essential for passing
+/// around messages by copying rather then dealing with references.
+///
+/// This trait is also not used to represent MIDI messages made up by multiple single messages, such
+/// as (N)RPN messages. Those are implemented in separate structs.
+///
+/// [`MidiMessageFactory`]: trait.MidiMessageFactory.html
+/// [`RawMidiMessage`]: struct.RawMidiMessage.html
+/// [`StructuredMidiMessage`]: enum.StructuredMidiMessage.html
+// TODO Maybe ditch the MIDI prefix everywhere?
 pub trait MidiMessage {
+    /// Returns the status byte.
     fn status_byte(&self) -> u8;
 
+    /// Returns the first data byte.
     fn data_byte_1(&self) -> U7;
 
+    /// Returns the second data byte.
     fn data_byte_2(&self) -> U7;
 
-    // Implementations can optimize this e.g. to save some matchings
+    /// Returns the status byte and the two data bytes as a tuple.
+    ///
+    /// Implementations can override this default implementation if it's cheaper to get all bytes
+    /// in one go.
     fn to_bytes(&self) -> (u8, U7, U7) {
         (self.status_byte(), self.data_byte_1(), self.data_byte_2())
     }
 
+    /// Converts this message to a MIDI message of another type.
     fn to_other<O: MidiMessageFactory>(&self) -> O {
         let bytes = self.to_bytes();
         unsafe { O::from_bytes_unchecked(bytes.0, bytes.1, bytes.2) }
     }
 
-    // Convenience method because matching via StructuredMidiMessage is frequently needed
+    /// Converts this message to a [`StructuredMidiMessage`], which is ideal for matching.
     fn to_structured(&self) -> StructuredMidiMessage {
         self.to_other()
     }
 
+    /// Returns the type of this message.
     fn r#type(&self) -> MidiMessageType {
         extract_type_from_status_byte(self.status_byte()).unwrap()
     }
 
+    /// Returns the super type of this message.
     fn super_type(&self) -> MidiMessageSuperType {
         use MidiMessageSuperType::*;
         use MidiMessageType::*;
@@ -91,11 +111,15 @@ pub trait MidiMessage {
         }
     }
 
+    /// Returns the main category of this message.
     fn main_category(&self) -> MidiMessageMainCategory {
         self.super_type().main_category()
     }
 
-    // Returns false if the message type is NoteOn but the velocity is 0
+    /// Returns whether this message is a note-on in a practical sense. That means, it also returns
+    /// `false` if the message type is [`NoteOn`] but the velocity is zero.
+    ///
+    /// [`NoteOn`]: enum.MidiMessageType.html#variant.NoteOn
     fn is_note_on(&self) -> bool {
         match self.to_structured() {
             StructuredMidiMessage::NoteOn { velocity, .. } => velocity > U7::MIN,
@@ -103,7 +127,10 @@ pub trait MidiMessage {
         }
     }
 
-    // Also returns true if the message type is NoteOn but the velocity is 0
+    /// Returns whether this message is a note-off in a practical sense. That means, it also returns
+    /// `true` if the message type is [`NoteOn`] but the velocity is zero.
+    ///
+    /// [`NoteOn`]: enum.MidiMessageType.html#variant.NoteOn
     fn is_note_off(&self) -> bool {
         use StructuredMidiMessage::*;
         match self.to_structured() {
@@ -113,6 +140,7 @@ pub trait MidiMessage {
         }
     }
 
+    /// Returns whether this message is a note-on or note-off.
     fn is_note(&self) -> bool {
         match self.r#type() {
             MidiMessageType::NoteOn | MidiMessageType::NoteOff => true,
@@ -120,6 +148,7 @@ pub trait MidiMessage {
         }
     }
 
+    /// Returns the channel of this message if applicable.
     fn channel(&self) -> Option<Channel> {
         if self.main_category() != MidiMessageMainCategory::Channel {
             return None;
@@ -127,6 +156,7 @@ pub trait MidiMessage {
         Some(extract_channel_from_status_byte(self.status_byte()))
     }
 
+    /// Returns the key number of this message if applicable.
     fn key_number(&self) -> Option<KeyNumber> {
         use MidiMessageType::*;
         match self.r#type() {
@@ -135,6 +165,7 @@ pub trait MidiMessage {
         }
     }
 
+    /// Returns the velocity of this message if applicable.
     fn velocity(&self) -> Option<U7> {
         use MidiMessageType::*;
         match self.r#type() {
@@ -143,6 +174,7 @@ pub trait MidiMessage {
         }
     }
 
+    /// Returns the controller number of this message if applicable.
     fn controller_number(&self) -> Option<ControllerNumber> {
         if self.r#type() != MidiMessageType::ControlChange {
             return None;
@@ -150,6 +182,7 @@ pub trait MidiMessage {
         Some(self.data_byte_1().into())
     }
 
+    /// Returns the control value of this message if applicable.
     fn control_value(&self) -> Option<U7> {
         if self.r#type() != MidiMessageType::ControlChange {
             return None;
@@ -157,6 +190,7 @@ pub trait MidiMessage {
         Some(self.data_byte_2())
     }
 
+    /// Returns the program number of this message if applicable.
     fn program_number(&self) -> Option<U7> {
         if self.r#type() != MidiMessageType::ProgramChange {
             return None;
@@ -164,6 +198,7 @@ pub trait MidiMessage {
         Some(self.data_byte_1())
     }
 
+    /// Returns the pressure amount of this message if applicable.
     fn pressure_amount(&self) -> Option<U7> {
         use MidiMessageType::*;
         match self.r#type() {
@@ -173,6 +208,7 @@ pub trait MidiMessage {
         }
     }
 
+    /// Returns the pitch bend value of this message if applicable.
     fn pitch_bend_value(&self) -> Option<U14> {
         if self.r#type() != MidiMessageType::PitchBendChange {
             return None;
@@ -184,15 +220,18 @@ pub trait MidiMessage {
     }
 }
 
-// The most low-level type of a MIDI message
+/// The most fine-grained type of a MIDI message.
+///
+/// Variants can be converted to and from `u8`. In case of channel messages, the `u8` value
+/// corresponds to the status byte with channel 0. In case of system messages, the `u8` value
+/// corresponds to the complete status byte.
 #[derive(
     Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, IntoPrimitive, TryFromPrimitive,
 )]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
 pub enum MidiMessageType {
-    // Channel messages = channel voice messages + channel mode messages (given value represents
-    // channel 0 status byte)
+    // Channel messages = channel voice messages + channel mode messages
     NoteOff = 0x80,
     NoteOn = 0x90,
     PolyphonicKeyPressure = 0xA0,
@@ -200,9 +239,9 @@ pub enum MidiMessageType {
     ProgramChange = 0xC0,
     ChannelPressure = 0xD0,
     PitchBendChange = 0xE0,
-    // System exclusive messages
+    // System Exclusive messages
     SystemExclusiveStart = 0xF0,
-    // System common messages
+    // System Common messages
     MidiTimeCodeQuarterFrame = 0xF1,
     SongPositionPointer = 0xF2,
     SongSelect = 0xF3,
@@ -210,7 +249,7 @@ pub enum MidiMessageType {
     SystemCommonUndefined2 = 0xF5,
     TuneRequest = 0xF6,
     SystemExclusiveEnd = 0xF7,
-    // System real-time messages (given value represents the complete status byte)
+    // System Real Time messages
     TimingClock = 0xF8,
     SystemRealTimeUndefined1 = 0xF9,
     Start = 0xFA,
@@ -222,9 +261,13 @@ pub enum MidiMessageType {
 }
 
 impl MidiMessageType {
+    /// `u8` representation of the first message type.
     pub const MIN: u8 = 0x80;
+
+    /// `u8` representation of the last message type.
     pub const MAX: u8 = 0xFF;
 
+    /// Returns the corresponding blurry super type.
     pub fn super_type(&self) -> BlurryMidiMessageSuperType {
         use BlurryMidiMessageSuperType::*;
         use MidiMessageType::*;
@@ -256,29 +299,43 @@ impl MidiMessageType {
     }
 }
 
-// A somewhat mid-level type of a MIDI message.
-// In this enum we don't distinguish between channel voice and channel mode messages because this
-// difference doesn't solely depend on the MidiMessageType (channel mode messages are just
-// particular ControlChange messages).
+/// Like [`MidiMessageSuperType`] but without distinction between different channel messages.
+///
+/// This enum exists because in some cases it can be helpful to obtain the MIDI message super type
+/// just from a [`MidiMessageType`] - at least to some degree. In order to accurately determine the
+/// [`MidiMessageSuperType`], it's necessary to have the actual MIDI message at hand, because
+/// the distinction between channel voice and channel mode messages depends on the controller
+/// number.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum BlurryMidiMessageSuperType {
+    /// See [`MidiMessageSuperType::ChannelVoice`] and [`MidiMessageSuperType::ChannelMode`]
     Channel,
+    /// See [`MidiMessageSuperType::SystemCommon`]
     SystemCommon,
+    /// See [`MidiMessageSuperType::SystemRealTime`]
     SystemRealTime,
+    /// See [`MidiMessageSuperType::SystemExclusive`]
     SystemExclusive,
 }
 
-// A somewhat mid-level type of a MIDI message.
+/// A more coarse-grained classification of MIDI messages than [`MidiMessageType`].
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum MidiMessageSuperType {
+    /// Channel Voice messages are used to send musical performance information.
     ChannelVoice,
+    /// Channel Mode messages affect the way a synthesizer responds to MIDI data.
     ChannelMode,
+    /// System Common messages are intended for all receivers in the system.
     SystemCommon,
+    /// System Real Time messages are used for synchronization between clock-based MIDI components.
     SystemRealTime,
+    /// System Exclusive messages are used to transfer any number of data bytes in a format
+    /// specified by the referenced manufacturer.
     SystemExclusive,
 }
 
 impl BlurryMidiMessageSuperType {
+    /// Returns the corresponding main category.
     pub fn main_category(&self) -> MidiMessageMainCategory {
         use MidiMessageMainCategory::*;
         if *self == BlurryMidiMessageSuperType::Channel {
@@ -290,6 +347,7 @@ impl BlurryMidiMessageSuperType {
 }
 
 impl MidiMessageSuperType {
+    /// Returns the corresponding main category.
     pub fn main_category(&self) -> MidiMessageMainCategory {
         use MidiMessageMainCategory::*;
         use MidiMessageSuperType::*;
@@ -300,14 +358,18 @@ impl MidiMessageSuperType {
     }
 }
 
-// The MIDI spec says: "Messages are divided into two main categories: Channel and System."
+/// The most high-level classification of MIDI messages.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum MidiMessageMainCategory {
+    /// Channel Messages apply to a specific channel.
     Channel,
+    /// System Messages are not channel-specific.
     System,
 }
 
-/// Content of a MIDI time code quarter frame message. It contains a part of the current time code.
+/// Possible contents of a MIDI Time Code Quarter Frame message. Each frame is part of the MIDI Time
+/// Code information used for synchronization of MIDI equipment and other equipment, such as audio
+/// or video tape machines.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum MidiTimeCodeQuarterFrame {
@@ -372,7 +434,7 @@ impl From<U7> for MidiTimeCodeQuarterFrame {
     }
 }
 
-/// Time code type contained in the last quarter frame message
+/// Possible time code types of a MIDI Time Code Quarter Frame message.
 #[derive(
     Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, IntoPrimitive, TryFromPrimitive,
 )]
@@ -385,6 +447,9 @@ pub enum TimeCodeType {
     Fps30NonDrop = 3,
 }
 
+/// An error which can be returned when trying to create a [`MidiMessage`] from raw bytes.
+///
+/// [`MidiMessage`]: trait.MidiMessage.html
 #[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
 #[display(fmt = "invalid status byte")]
 pub struct InvalidStatusByteError;

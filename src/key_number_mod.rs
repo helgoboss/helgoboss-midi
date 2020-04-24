@@ -1,5 +1,8 @@
 // Basic newtype definition
-newtype!(name = KeyNumber, repr = u8, max = 127);
+newtype! {
+    #[doc = r"A key number (0 - 127), e.g. of a MIDI Note On message."]
+    name = KeyNumber, repr = u8, max = 127
+}
 
 // From related newtype to this newtype and back
 impl_from_newtype_to_newtype!(KeyNumber, crate::U7);

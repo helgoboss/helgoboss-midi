@@ -1,5 +1,8 @@
 // Basic newtype definition
-newtype!(name = U7, repr = u8, max = 127);
+newtype! {
+    #[doc = r"A 7-bit integer (0 - 127)."]
+    name = U7, repr = u8, max = 127
+}
 
 // From lower newtypes to this newtype
 impl_from_newtype_to_newtype!(crate::U4, U7);

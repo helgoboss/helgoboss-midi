@@ -1,5 +1,8 @@
 // Basic newtype definition
-newtype!(name = ControllerNumber, repr = u8, max = 127);
+newtype! {
+    #[doc = r"A controller number (0 - 127) of a MIDI Control Change message."]
+    name = ControllerNumber, repr = u8, max = 127
+}
 
 // From related newtype to this newtype and back
 impl_from_newtype_to_newtype!(ControllerNumber, crate::U7);
