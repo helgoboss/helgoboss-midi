@@ -1,7 +1,7 @@
 use crate::{
     build_status_byte, extract_type_from_status_byte, BlurryMidiMessageSuperType, Channel,
     ControllerNumber, InvalidStatusByteError, KeyNumber, MidiMessage, MidiMessageType,
-    MidiTimeCodeQuarterFrame, StructuredMidiMessage, U14, U7,
+    MidiTimeCodeQuarterFrame, U14, U7,
 };
 
 /// Trait to be implemented by struct representing a MIDI message if it supports creation of various
@@ -26,10 +26,8 @@ pub trait MidiMessageFactory: Sized {
         Ok(unsafe { Self::from_bytes_unchecked(status_byte, data_byte_1, data_byte_2) })
     }
 
-    fn from_structured(msg: &StructuredMidiMessage) -> Self {
-        unsafe {
-            Self::from_bytes_unchecked(msg.status_byte(), msg.data_byte_1(), msg.data_byte_2())
-        }
+    fn from_other(msg: &impl MidiMessage) -> Self {
+        msg.to_other()
     }
 
     fn channel_message(r#type: MidiMessageType, channel: Channel, data_1: U7, data_2: U7) -> Self {

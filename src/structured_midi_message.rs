@@ -1,7 +1,8 @@
 use crate::{
-    build_status_byte, extract_high_7_bit_value_from_14_bit_value,
-    extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, KeyNumber, MidiMessage,
-    MidiMessageFactory, MidiMessageType, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U7,
+    build_14_bit_value_from_two_7_bit_values, build_status_byte, extract_channel_from_status_byte,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
+    extract_type_from_status_byte, Channel, ControllerNumber, KeyNumber, MidiMessage,
+    MidiMessageFactory, MidiMessageType, MidiTimeCodeQuarterFrame, U14, U7,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -74,12 +75,67 @@ pub enum StructuredMidiMessage {
 
 impl MidiMessageFactory for StructuredMidiMessage {
     unsafe fn from_bytes_unchecked(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Self {
-        RawMidiMessage::from_bytes_unchecked(status_byte, data_byte_1, data_byte_2).to_structured()
-    }
-
-    // Optimization (although probably not used anyway)
-    fn from_structured(msg: &StructuredMidiMessage) -> Self {
-        msg.clone()
+        use MidiMessageType::*;
+        let r#type = extract_type_from_status_byte(status_byte).unwrap();
+        match r#type {
+            NoteOff => StructuredMidiMessage::NoteOff {
+                channel: extract_channel_from_status_byte(status_byte),
+                key_number: data_byte_1.into(),
+                velocity: data_byte_2,
+            },
+            NoteOn => StructuredMidiMessage::NoteOn {
+                channel: extract_channel_from_status_byte(status_byte),
+                key_number: data_byte_1.into(),
+                velocity: data_byte_2,
+            },
+            PolyphonicKeyPressure => StructuredMidiMessage::PolyphonicKeyPressure {
+                channel: extract_channel_from_status_byte(status_byte),
+                key_number: data_byte_1.into(),
+                pressure_amount: data_byte_2,
+            },
+            ControlChange => StructuredMidiMessage::ControlChange {
+                channel: extract_channel_from_status_byte(status_byte),
+                controller_number: data_byte_1.into(),
+                control_value: data_byte_2,
+            },
+            ProgramChange => StructuredMidiMessage::ProgramChange {
+                channel: extract_channel_from_status_byte(status_byte),
+                program_number: data_byte_1.into(),
+            },
+            ChannelPressure => StructuredMidiMessage::ChannelPressure {
+                channel: extract_channel_from_status_byte(status_byte),
+                pressure_amount: data_byte_1,
+            },
+            PitchBendChange => StructuredMidiMessage::PitchBendChange {
+                channel: extract_channel_from_status_byte(status_byte),
+                pitch_bend_value: build_14_bit_value_from_two_7_bit_values(
+                    data_byte_2,
+                    data_byte_1,
+                ),
+            },
+            SystemExclusiveStart => StructuredMidiMessage::SystemExclusiveStart,
+            MidiTimeCodeQuarterFrame => {
+                StructuredMidiMessage::MidiTimeCodeQuarterFrame(data_byte_1.into())
+            }
+            SongPositionPointer => StructuredMidiMessage::SongPositionPointer {
+                position: build_14_bit_value_from_two_7_bit_values(data_byte_2, data_byte_1),
+            },
+            SongSelect => StructuredMidiMessage::SongSelect {
+                song_number: data_byte_1,
+            },
+            TuneRequest => StructuredMidiMessage::TuneRequest,
+            SystemExclusiveEnd => StructuredMidiMessage::SystemExclusiveEnd,
+            TimingClock => StructuredMidiMessage::TimingClock,
+            Start => StructuredMidiMessage::Start,
+            Continue => StructuredMidiMessage::Continue,
+            Stop => StructuredMidiMessage::Stop,
+            ActiveSensing => StructuredMidiMessage::ActiveSensing,
+            SystemReset => StructuredMidiMessage::SystemReset,
+            SystemCommonUndefined1 => StructuredMidiMessage::SystemCommonUndefined1,
+            SystemCommonUndefined2 => StructuredMidiMessage::SystemCommonUndefined2,
+            SystemRealTimeUndefined1 => StructuredMidiMessage::SystemRealTimeUndefined1,
+            SystemRealTimeUndefined2 => StructuredMidiMessage::SystemRealTimeUndefined2,
+        }
     }
 }
 

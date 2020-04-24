@@ -83,7 +83,7 @@ mod tests {
         assert_eq!(msg.msb_controller_number(), cn(2));
         assert_eq!(msg.lsb_controller_number(), cn(34));
         assert_eq!(msg.value(), u14(1057));
-        let midi_msgs: [RawMidiMessage; 2] = msg.to_midi_messages();
+        let midi_msgs = msg.to_midi_messages();
         assert_eq!(
             midi_msgs,
             [
@@ -91,5 +91,7 @@ mod tests {
                 RawMidiMessage::control_change(ch(5), cn(34), u7(33))
             ]
         );
+        let midi_msgs_2: [RawMidiMessage; 2] = msg.into();
+        assert_eq!(midi_msgs_2, midi_msgs);
     }
 }

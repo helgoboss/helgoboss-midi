@@ -15,3 +15,7 @@ pub fn build_14_bit_value_from_two_7_bit_values(high: U7, low: U7) -> U14 {
 pub fn build_status_byte(type_byte: u8, channel: Channel) -> u8 {
     type_byte | u8::from(channel)
 }
+
+pub fn extract_channel_from_status_byte(byte: u8) -> Channel {
+    Channel(byte & 0x0f)
+}

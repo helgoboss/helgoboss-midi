@@ -1,6 +1,6 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, Channel, ControllerNumber, KeyNumber,
-    StructuredMidiMessage, U14, U4, U7,
+    build_14_bit_value_from_two_7_bit_values, extract_channel_from_status_byte, Channel,
+    ControllerNumber, KeyNumber, MidiMessageFactory, StructuredMidiMessage, U14, U4, U7,
 };
 use derive_more::{Display, Error};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -36,6 +36,21 @@ pub trait MidiMessage {
     fn data_byte_1(&self) -> U7;
 
     fn data_byte_2(&self) -> U7;
+
+    // Implementations can optimize this e.g. to save some matchings
+    fn to_bytes(&self) -> (u8, U7, U7) {
+        (self.status_byte(), self.data_byte_1(), self.data_byte_2())
+    }
+
+    fn to_other<O: MidiMessageFactory>(&self) -> O {
+        let bytes = self.to_bytes();
+        unsafe { O::from_bytes_unchecked(bytes.0, bytes.1, bytes.2) }
+    }
+
+    // Convenience method because matching via StructuredMidiMessage is frequently needed
+    fn to_structured(&self) -> StructuredMidiMessage {
+        self.to_other()
+    }
 
     fn r#type(&self) -> MidiMessageType {
         extract_type_from_status_byte(self.status_byte()).unwrap()
@@ -81,72 +96,6 @@ pub trait MidiMessage {
 
     fn main_category(&self) -> MidiMessageMainCategory {
         self.super_type().main_category()
-    }
-
-    fn to_structured(&self) -> StructuredMidiMessage {
-        use MidiMessageType::*;
-        match self.r#type() {
-            NoteOff => StructuredMidiMessage::NoteOff {
-                channel: extract_channel_from_status_byte(self.status_byte()),
-                key_number: self.data_byte_1().into(),
-                velocity: self.data_byte_2(),
-            },
-            NoteOn => StructuredMidiMessage::NoteOn {
-                channel: extract_channel_from_status_byte(self.status_byte()),
-                key_number: self.data_byte_1().into(),
-                velocity: self.data_byte_2(),
-            },
-            PolyphonicKeyPressure => StructuredMidiMessage::PolyphonicKeyPressure {
-                channel: extract_channel_from_status_byte(self.status_byte()),
-                key_number: self.data_byte_1().into(),
-                pressure_amount: self.data_byte_2(),
-            },
-            ControlChange => StructuredMidiMessage::ControlChange {
-                channel: extract_channel_from_status_byte(self.status_byte()),
-                controller_number: self.data_byte_1().into(),
-                control_value: self.data_byte_2(),
-            },
-            ProgramChange => StructuredMidiMessage::ProgramChange {
-                channel: extract_channel_from_status_byte(self.status_byte()),
-                program_number: self.data_byte_1().into(),
-            },
-            ChannelPressure => StructuredMidiMessage::ChannelPressure {
-                channel: extract_channel_from_status_byte(self.status_byte()),
-                pressure_amount: self.data_byte_1(),
-            },
-            PitchBendChange => StructuredMidiMessage::PitchBendChange {
-                channel: extract_channel_from_status_byte(self.status_byte()),
-                pitch_bend_value: build_14_bit_value_from_two_7_bit_values(
-                    self.data_byte_2(),
-                    self.data_byte_1(),
-                ),
-            },
-            SystemExclusiveStart => StructuredMidiMessage::SystemExclusiveStart,
-            MidiTimeCodeQuarterFrame => {
-                StructuredMidiMessage::MidiTimeCodeQuarterFrame(self.data_byte_1().into())
-            }
-            SongPositionPointer => StructuredMidiMessage::SongPositionPointer {
-                position: build_14_bit_value_from_two_7_bit_values(
-                    self.data_byte_2(),
-                    self.data_byte_1(),
-                ),
-            },
-            SongSelect => StructuredMidiMessage::SongSelect {
-                song_number: self.data_byte_1(),
-            },
-            TuneRequest => StructuredMidiMessage::TuneRequest,
-            SystemExclusiveEnd => StructuredMidiMessage::SystemExclusiveEnd,
-            TimingClock => StructuredMidiMessage::TimingClock,
-            Start => StructuredMidiMessage::Start,
-            Continue => StructuredMidiMessage::Continue,
-            Stop => StructuredMidiMessage::Stop,
-            ActiveSensing => StructuredMidiMessage::ActiveSensing,
-            SystemReset => StructuredMidiMessage::SystemReset,
-            SystemCommonUndefined1 => StructuredMidiMessage::SystemCommonUndefined1,
-            SystemCommonUndefined2 => StructuredMidiMessage::SystemCommonUndefined2,
-            SystemRealTimeUndefined1 => StructuredMidiMessage::SystemRealTimeUndefined1,
-            SystemRealTimeUndefined2 => StructuredMidiMessage::SystemRealTimeUndefined2,
-        }
     }
 
     // Returns false if the message type is NoteOn but the velocity is 0
@@ -444,10 +393,6 @@ pub enum TimeCodeType {
     Fps25 = 1,
     Fps30DropFrame = 2,
     Fps30NonDrop = 3,
-}
-
-fn extract_channel_from_status_byte(byte: u8) -> Channel {
-    Channel(byte & 0x0f)
 }
 
 #[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
@@ -1053,7 +998,7 @@ mod tests {
         for msg in messages {
             // When
             let structured = msg.to_structured();
-            let restored = RawMidiMessage::from_structured(&structured);
+            let restored = RawMidiMessage::from_other(&structured);
             // Then
             assert_equal_results(&msg, &structured);
             assert_equal_results(&msg, &restored);
