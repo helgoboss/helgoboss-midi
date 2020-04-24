@@ -113,18 +113,31 @@ impl ControllerNumber {
     pub const MONO_MODE_ON: ControllerNumber = ControllerNumber(0x7E);
     pub const POLY_MODE_ON: ControllerNumber = ControllerNumber(0x7F);
 
-    pub fn can_be_part_of_14_bit_message(&self) -> bool {
+    /// Returns whether this controller number can be used to make up a 14-bit Control Change
+    /// message.
+    pub fn can_be_part_of_14_bit_control_change_message(&self) -> bool {
         self.0 < 64
     }
 
-    pub fn corresponding_14_bit_lsb(&self) -> Option<ControllerNumber> {
+    /// If this controller number can be used for sending the most significant byte of a 14-bit
+    /// Control Change message, this function returns the corresponding controller number that would
+    /// be used to send the least significant byte of it.
+    pub fn corresponding_14_bit_lsb_controller_number(&self) -> Option<ControllerNumber> {
         if self.0 >= 32 {
             return None;
         }
         Some(ControllerNumber(self.0 + 32))
     }
 
-    pub fn can_be_part_of_parameter_number_message(&self) -> bool {
+    /// Returns whether this controller number is intended to be used to send part of a (N)RPN
+    /// message.
+    pub fn is_parameter_number_message_controller_number(&self) -> bool {
         matches!(self.0, 98 | 99 | 100 | 101 | 38 | 6)
+    }
+
+    /// Returns whether this controller number is intended to be used for sending Channel Mode
+    /// messages.
+    pub fn is_channel_mode_message_controller_number(&self) -> bool {
+        *self >= Self::RESET_ALL_CONTROLLERS
     }
 }

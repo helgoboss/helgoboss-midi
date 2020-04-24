@@ -5,6 +5,12 @@ use crate::{
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// A 14-bit MIDI Control Change message.
+///
+/// Unlike a [`MidiMessage`] of type [`MidiMessageType::ControlChange`], this one supports 14-bit
+/// resolution, that means 16384 different values instead of only 128. MIDI systems emit those by
+/// sending 2 single Control Change messages in a row. The [`MidiControlChange14BitMessageScanner`]
+/// can be used to extract such messages from a stream of [`MidiMessage`]s.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MidiControlChange14BitMessage {
@@ -14,12 +20,22 @@ pub struct MidiControlChange14BitMessage {
 }
 
 impl MidiControlChange14BitMessage {
+    /// Creates a 14-bit Control Change message.
+    ///
+    /// # Panics
+    ///
+    /// This function panics if `msb_controller_number` can't serve as controller number for
+    /// transmitting the most significant byte of a 14-bit Control Change message.
     pub fn new(
         channel: Channel,
         msb_controller_number: ControllerNumber,
         value: U14,
     ) -> MidiControlChange14BitMessage {
-        assert!(msb_controller_number.corresponding_14_bit_lsb().is_some());
+        assert!(
+            msb_controller_number
+                .corresponding_14_bit_lsb_controller_number()
+                .is_some()
+        );
         MidiControlChange14BitMessage {
             channel,
             msb_controller_number,
@@ -27,24 +43,30 @@ impl MidiControlChange14BitMessage {
         }
     }
 
+    /// Returns the channel of this message.
     pub fn channel(&self) -> Channel {
         self.channel
     }
 
+    /// Returns the controller number for transmitting the most significant byte of this message.
     pub fn msb_controller_number(&self) -> ControllerNumber {
         self.msb_controller_number
     }
 
+    /// Returns the controller number for transmitting the least significant byte of this message.
     pub fn lsb_controller_number(&self) -> ControllerNumber {
         self.msb_controller_number
-            .corresponding_14_bit_lsb()
+            .corresponding_14_bit_lsb_controller_number()
             .unwrap()
     }
 
+    /// Returns the 14-bit value of this message.
     pub fn value(&self) -> U14 {
         self.value
     }
 
+    /// Translates this message into 2 single 7-bit Control Change MIDI messages, which need to be
+    /// sent in a row in order to encode this 14-bit Control Change message.
     pub fn to_midi_messages<T: MidiMessageFactory>(&self) -> [T; 2] {
         [
             T::control_change(

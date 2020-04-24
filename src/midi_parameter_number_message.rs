@@ -5,6 +5,11 @@ use crate::{
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
+/// A MIDI Parameter Number message, either registered (RPN) oder non-registered (NRPN).
+///
+/// MIDI systems emit those by sending up to 4 single Control Change messages in a row. The
+/// [`MidiParameterNumberMessageScanner`] can be used to extract such messages from a stream of
+/// [`MidiMessage`]s.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MidiParameterNumberMessage {
@@ -16,6 +21,7 @@ pub struct MidiParameterNumberMessage {
 }
 
 impl MidiParameterNumberMessage {
+    /// Creates an NRPN message with a 7-bit value.
     pub fn non_registered_7_bit(
         channel: Channel,
         number: U14,
@@ -24,6 +30,7 @@ impl MidiParameterNumberMessage {
         Self::seven_bit(channel, number, value, false)
     }
 
+    /// Creates an NRPN message with a 14-bit value.
     pub fn non_registered_14_bit(
         channel: Channel,
         number: U14,
@@ -32,6 +39,7 @@ impl MidiParameterNumberMessage {
         Self::fourteen_bit(channel, number, value, false)
     }
 
+    /// Creates an RPN message with a 7-bit value.
     pub fn registered_7_bit(
         channel: Channel,
         number: U14,
@@ -40,6 +48,7 @@ impl MidiParameterNumberMessage {
         Self::seven_bit(channel, number, value, true)
     }
 
+    /// Creates an RPN message with a 14-bit value.
     pub fn registered_14_bit(
         channel: Channel,
         number: U14,
@@ -78,27 +87,38 @@ impl MidiParameterNumberMessage {
         }
     }
 
+    /// Returns the channel of this message.
     pub fn channel(&self) -> Channel {
         self.channel
     }
 
+    /// Returns the parameter number of this message.
     pub fn number(&self) -> U14 {
         self.number
     }
 
+    /// Returns the value of this message.
+    ///
+    /// If it's just a 7-bit message, the value is <= 127.
     pub fn value(&self) -> U14 {
         self.value
     }
 
+    /// Returns `true` if this message has a 14-bit value and `false` if only a 7-bit value.
     pub fn is_14_bit(&self) -> bool {
         self.is_14_bit
     }
 
+    /// Returns whether this message uses a registered parameter number.
     pub fn is_registered(&self) -> bool {
         self.is_registered
     }
 
-    // If not 14-bit, this returns only 3 messages (the last one is None)
+    /// Translates this message into up to 4 single 7-bit Control Change MIDI messages, which need
+    /// to be sent in a row in order to encode this (N)RPN message.
+    ///
+    /// If this message has a 14-bit value, all returned messages are `Some`. If it has a 7-bit
+    /// value only, the last one is `None`.
     pub fn to_midi_messages<T: MidiMessageFactory>(&self) -> [Option<T>; 4] {
         let mut messages = [None, None, None, None];
         let mut i = 0;

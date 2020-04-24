@@ -3,35 +3,41 @@ use crate::{
     MidiControlChange14BitMessage, MidiMessage, StructuredMidiMessage, U7,
 };
 
+/// Scanner for detecting 14-bit Control Change messages in a stream of single MIDI messages.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
-pub struct MidiControlChange14BitMessageParser {
-    parser_by_channel: [ParserForOneChannel; 16],
+pub struct MidiControlChange14BitMessageScanner {
+    scanner_by_channel: [ScannerForOneChannel; 16],
 }
 
-impl MidiControlChange14BitMessageParser {
-    pub fn new() -> MidiControlChange14BitMessageParser {
+impl MidiControlChange14BitMessageScanner {
+    /// Creates a new scanner.
+    pub fn new() -> MidiControlChange14BitMessageScanner {
         Default::default()
     }
 
+    /// Feeds the scanner a single MIDI messages.
+    ///
+    /// Returns the 14-bit Control Change message if one has been detected.  
     pub fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiControlChange14BitMessage> {
         let channel = msg.channel()?;
-        self.parser_by_channel[usize::from(channel)].feed(msg)
+        self.scanner_by_channel[usize::from(channel)].feed(msg)
     }
 
+    /// Resets the scanner discarding all intermediate scanning progress.
     pub fn reset(&mut self) {
-        for p in self.parser_by_channel.iter_mut() {
+        for p in self.scanner_by_channel.iter_mut() {
             p.reset();
         }
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
-struct ParserForOneChannel {
+struct ScannerForOneChannel {
     msb_controller_number: Option<ControllerNumber>,
     value_msb: Option<U7>,
 }
 
-impl ParserForOneChannel {
+impl ScannerForOneChannel {
     fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiControlChange14BitMessage> {
         match msg.to_structured() {
             StructuredMidiMessage::ControlChange {
@@ -70,7 +76,11 @@ impl ParserForOneChannel {
     ) -> Option<MidiControlChange14BitMessage> {
         let msb_controller_number = self.msb_controller_number?;
         let value_msb = self.value_msb?;
-        if lsb_controller_number != msb_controller_number.corresponding_14_bit_lsb().unwrap() {
+        if lsb_controller_number
+            != msb_controller_number
+                .corresponding_14_bit_lsb_controller_number()
+                .unwrap()
+        {
             return None;
         }
         let value = build_14_bit_value_from_two_7_bit_values(value_msb, value_lsb);
@@ -91,19 +101,19 @@ mod tests {
     #[test]
     fn should_ignore_non_contributing_midi_messages() {
         // Given
-        let mut parser = MidiControlChange14BitMessageParser::new();
+        let mut scanner = MidiControlChange14BitMessageScanner::new();
         // When
         // Then
         assert_eq!(
-            parser.feed(&RawMidiMessage::note_on(ch(0), key_number(100), u7(100))),
+            scanner.feed(&RawMidiMessage::note_on(ch(0), key_number(100), u7(100))),
             None
         );
         assert_eq!(
-            parser.feed(&RawMidiMessage::note_on(ch(0), key_number(100), u7(120))),
+            scanner.feed(&RawMidiMessage::note_on(ch(0), key_number(100), u7(120))),
             None
         );
         assert_eq!(
-            parser.feed(&RawMidiMessage::control_change(ch(0), cn(80), u7(1))),
+            scanner.feed(&RawMidiMessage::control_change(ch(0), cn(80), u7(1))),
             None
         );
     }
@@ -111,10 +121,10 @@ mod tests {
     #[test]
     fn should_return_14_bit_result_message_on_second_lsb_midi_message() {
         // Given
-        let mut parser = MidiControlChange14BitMessageParser::new();
+        let mut scanner = MidiControlChange14BitMessageScanner::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(34), u7(33)));
+        let result_1 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
+        let result_2 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(34), u7(33)));
         // Then
         assert_eq!(result_1, None);
         let result_2 = result_2.unwrap();
@@ -127,12 +137,12 @@ mod tests {
     #[test]
     fn should_process_different_channels_independently() {
         // Given
-        let mut parser = MidiControlChange14BitMessageParser::new();
+        let mut scanner = MidiControlChange14BitMessageScanner::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(6), cn(3), u7(8)));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(34), u7(33)));
-        let result_4 = parser.feed(&RawMidiMessage::control_change(ch(6), cn(35), u7(34)));
+        let result_1 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
+        let result_2 = scanner.feed(&RawMidiMessage::control_change(ch(6), cn(3), u7(8)));
+        let result_3 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(34), u7(33)));
+        let result_4 = scanner.feed(&RawMidiMessage::control_change(ch(6), cn(35), u7(34)));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
@@ -151,11 +161,11 @@ mod tests {
     #[test]
     fn should_ignore_non_contributing_midi_messages_mixed() {
         // Given
-        let mut parser = MidiControlChange14BitMessageParser::new();
+        let mut scanner = MidiControlChange14BitMessageScanner::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(77), u7(9)));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(34), u7(33)));
+        let result_1 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
+        let result_2 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(77), u7(9)));
+        let result_3 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(34), u7(33)));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
@@ -169,12 +179,12 @@ mod tests {
     #[test]
     fn should_only_consider_last_incoming_msb() {
         // Given
-        let mut parser = MidiControlChange14BitMessageParser::new();
+        let mut scanner = MidiControlChange14BitMessageScanner::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(3), u7(8)));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(34), u7(33)));
-        let result_4 = parser.feed(&RawMidiMessage::control_change(ch(5), cn(35), u7(34)));
+        let result_1 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(2), u7(8)));
+        let result_2 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(3), u7(8)));
+        let result_3 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(34), u7(33)));
+        let result_4 = scanner.feed(&RawMidiMessage::control_change(ch(5), cn(35), u7(34)));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);

@@ -25,14 +25,14 @@ pub use raw_midi_message::*;
 mod midi_control_change_14_bit_message;
 pub use midi_control_change_14_bit_message::*;
 
-mod midi_control_change_14_bit_message_parser;
-pub use midi_control_change_14_bit_message_parser::*;
+mod midi_control_change_14_bit_message_scanner;
+pub use midi_control_change_14_bit_message_scanner::*;
 
 mod midi_parameter_number_message;
 pub use midi_parameter_number_message::*;
 
-mod midi_parameter_number_message_parser;
-pub use midi_parameter_number_message_parser::*;
+mod midi_parameter_number_message_scanner;
+pub use midi_parameter_number_message_scanner::*;
 
 // I added the _mod suffix because of intellij-rust issue 4992
 mod channel_mod;

@@ -85,11 +85,11 @@ pub trait MidiMessage {
             | ProgramChange => ChannelVoice,
             ControlChange => {
                 if ControllerNumber::from(self.data_byte_1())
-                    < ControllerNumber::LOCAL_CONTROL_ON_OFF
+                    .is_channel_mode_message_controller_number()
                 {
-                    ChannelVoice
-                } else {
                     ChannelMode
+                } else {
+                    ChannelVoice
                 }
             }
             TimingClock

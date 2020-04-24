@@ -3,37 +3,43 @@ use crate::{
     StructuredMidiMessage, U7,
 };
 
+/// Scanner for detecting (N)RPN messages in a stream of single MIDI messages.
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
-pub struct MidiParameterNumberMessageParser {
-    parser_by_channel: [ParserForOneChannel; 16],
+pub struct MidiParameterNumberMessageScanner {
+    scanner_by_channel: [ScannerForOneChannel; 16],
 }
 
-impl MidiParameterNumberMessageParser {
-    pub fn new() -> MidiParameterNumberMessageParser {
+impl MidiParameterNumberMessageScanner {
+    /// Creates a new scanner.
+    pub fn new() -> MidiParameterNumberMessageScanner {
         Default::default()
     }
 
+    /// Feeds the scanner a single MIDI messages.
+    ///
+    /// Returns the (N)RPN message if one has been detected.  
     pub fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiParameterNumberMessage> {
         let channel = msg.channel()?;
-        self.parser_by_channel[usize::from(channel)].feed(msg)
+        self.scanner_by_channel[usize::from(channel)].feed(msg)
     }
 
+    /// Resets the scanner discarding all intermediate scanning progress.
     pub fn reset(&mut self) {
-        for p in self.parser_by_channel.iter_mut() {
+        for p in self.scanner_by_channel.iter_mut() {
             p.reset();
         }
     }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
-struct ParserForOneChannel {
+struct ScannerForOneChannel {
     number_msb: Option<U7>,
     number_lsb: Option<U7>,
     is_registered: bool,
     value_lsb: Option<U7>,
 }
 
-impl ParserForOneChannel {
+impl ScannerForOneChannel {
     fn feed(&mut self, msg: &impl MidiMessage) -> Option<MidiParameterNumberMessage> {
         match msg.to_structured() {
             StructuredMidiMessage::ControlChange {
@@ -133,19 +139,19 @@ mod tests {
     #[test]
     fn should_ignore_non_contributing_midi_messages() {
         // Given
-        let mut parser = MidiParameterNumberMessageParser::new();
+        let mut scanner = MidiParameterNumberMessageScanner::new();
         // When
         // Then
         assert_eq!(
-            parser.feed(&RawMidiMessage::note_on(ch(0), key_number(100), u7(100))),
+            scanner.feed(&RawMidiMessage::note_on(ch(0), key_number(100), u7(100))),
             None
         );
         assert_eq!(
-            parser.feed(&RawMidiMessage::note_on(ch(0), key_number(100), u7(120))),
+            scanner.feed(&RawMidiMessage::note_on(ch(0), key_number(100), u7(120))),
             None
         );
         assert_eq!(
-            parser.feed(&RawMidiMessage::control_change(ch(0), cn(80), u7(1))),
+            scanner.feed(&RawMidiMessage::control_change(ch(0), cn(80), u7(1))),
             None
         );
     }
@@ -153,12 +159,12 @@ mod tests {
     #[test]
     fn should_return_parameter_number_result_message_on_fourth_midi_message() {
         // Given
-        let mut parser = MidiParameterNumberMessageParser::new();
+        let mut scanner = MidiParameterNumberMessageScanner::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(0), cn(101), u7(3)));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(0), cn(100), u7(36)));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(0), cn(38), u7(24)));
-        let result_4 = parser.feed(&RawMidiMessage::control_change(ch(0), cn(6), u7(117)));
+        let result_1 = scanner.feed(&RawMidiMessage::control_change(ch(0), cn(101), u7(3)));
+        let result_2 = scanner.feed(&RawMidiMessage::control_change(ch(0), cn(100), u7(36)));
+        let result_3 = scanner.feed(&RawMidiMessage::control_change(ch(0), cn(38), u7(24)));
+        let result_4 = scanner.feed(&RawMidiMessage::control_change(ch(0), cn(6), u7(117)));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
@@ -174,11 +180,11 @@ mod tests {
     #[test]
     fn should_return_parameter_number_result_message_on_third_midi_message() {
         // Given
-        let mut parser = MidiParameterNumberMessageParser::new();
+        let mut scanner = MidiParameterNumberMessageScanner::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(2), cn(99), u7(3)));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(2), cn(98), u7(37)));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(2), cn(6), u7(126)));
+        let result_1 = scanner.feed(&RawMidiMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_2 = scanner.feed(&RawMidiMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_3 = scanner.feed(&RawMidiMessage::control_change(ch(2), cn(6), u7(126)));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
@@ -193,15 +199,15 @@ mod tests {
     #[test]
     fn should_process_different_channels_independently() {
         // Given
-        let mut parser = MidiParameterNumberMessageParser::new();
+        let mut scanner = MidiParameterNumberMessageScanner::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(0), cn(101), u7(3)));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(2), cn(99), u7(3)));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(0), cn(100), u7(36)));
-        let result_4 = parser.feed(&RawMidiMessage::control_change(ch(2), cn(98), u7(37)));
-        let result_5 = parser.feed(&RawMidiMessage::control_change(ch(0), cn(38), u7(24)));
-        let result_6 = parser.feed(&RawMidiMessage::control_change(ch(2), cn(6), u7(126)));
-        let result_7 = parser.feed(&RawMidiMessage::control_change(ch(0), cn(6), u7(117)));
+        let result_1 = scanner.feed(&RawMidiMessage::control_change(ch(0), cn(101), u7(3)));
+        let result_2 = scanner.feed(&RawMidiMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_3 = scanner.feed(&RawMidiMessage::control_change(ch(0), cn(100), u7(36)));
+        let result_4 = scanner.feed(&RawMidiMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_5 = scanner.feed(&RawMidiMessage::control_change(ch(0), cn(38), u7(24)));
+        let result_6 = scanner.feed(&RawMidiMessage::control_change(ch(2), cn(6), u7(126)));
+        let result_7 = scanner.feed(&RawMidiMessage::control_change(ch(0), cn(6), u7(117)));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_3, None);
@@ -225,14 +231,14 @@ mod tests {
     #[test]
     fn should_ignore_non_contributing_midi_messages_mixed() {
         // Given
-        let mut parser = MidiParameterNumberMessageParser::new();
+        let mut scanner = MidiParameterNumberMessageScanner::new();
         // When
-        let result_1 = parser.feed(&RawMidiMessage::control_change(ch(2), cn(99), u7(3)));
-        parser.feed(&RawMidiMessage::control_change(ch(2), cn(34), u7(5)));
-        parser.feed(&RawMidiMessage::note_on(ch(2), key_number(100), u7(105)));
-        let result_2 = parser.feed(&RawMidiMessage::control_change(ch(2), cn(98), u7(37)));
-        parser.feed(&RawMidiMessage::control_change(ch(2), cn(50), u7(6)));
-        let result_3 = parser.feed(&RawMidiMessage::control_change(ch(2), cn(6), u7(126)));
+        let result_1 = scanner.feed(&RawMidiMessage::control_change(ch(2), cn(99), u7(3)));
+        scanner.feed(&RawMidiMessage::control_change(ch(2), cn(34), u7(5)));
+        scanner.feed(&RawMidiMessage::note_on(ch(2), key_number(100), u7(105)));
+        let result_2 = scanner.feed(&RawMidiMessage::control_change(ch(2), cn(98), u7(37)));
+        scanner.feed(&RawMidiMessage::control_change(ch(2), cn(50), u7(6)));
+        let result_3 = scanner.feed(&RawMidiMessage::control_change(ch(2), cn(6), u7(126)));
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
