@@ -140,7 +140,7 @@ impl MidiParameterNumberMessage {
             if self.is_14_bit {
                 extract_high_7_bit_value_from_14_bit_value(self.value)
             } else {
-                U7(u16::from(self.value) as u8)
+                U7(self.value.get() as u8)
             },
         ));
         messages

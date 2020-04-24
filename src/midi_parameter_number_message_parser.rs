@@ -5,7 +5,7 @@ use crate::{
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
 pub struct MidiParameterNumberMessageParser {
-    parser_by_channel: [ParserForOneChannel; Channel::COUNT as usize],
+    parser_by_channel: [ParserForOneChannel; 16],
 }
 
 impl MidiParameterNumberMessageParser {
@@ -40,7 +40,7 @@ impl ParserForOneChannel {
                 channel,
                 controller_number,
                 control_value,
-            } => match u8::from(controller_number) {
+            } => match controller_number.get() {
                 98 => self.process_number_lsb(control_value, false),
                 99 => self.process_number_msb(control_value, false),
                 100 => self.process_number_lsb(control_value, true),

@@ -364,7 +364,7 @@ fn build_mtc_quarter_frame_data_byte(frame_type: u8, data: U4) -> U7 {
 impl From<U7> for MidiTimeCodeQuarterFrame {
     fn from(data_byte_1: U7) -> Self {
         use MidiTimeCodeQuarterFrame::*;
-        let data = u8::from(data_byte_1);
+        let data = data_byte_1.get();
         match extract_high_nibble_from_byte(data) {
             0 => FrameCountLsNibble(extract_low_nibble_from_byte(data)),
             1 => FrameCountMsNibble(extract_low_nibble_from_byte(data)),
@@ -432,7 +432,7 @@ fn build_byte_from_nibbles(high_nibble: u8, low_nibble: u8) -> u8 {
 mod tests {
     use super::*;
     use crate::test_util::{channel as ch, controller_number, key_number, u14, u7};
-    use crate::{Channel, MidiMessageFactory, RawMidiMessage};
+    use crate::{MidiMessageFactory, RawMidiMessage};
     #[cfg(feature = "serde")]
     use serde_json::json;
 
@@ -986,7 +986,7 @@ mod tests {
         // Given
         let messages: Vec<RawMidiMessage> = MidiMessageType::iter()
             .flat_map(move |t| match t.super_type() {
-                BlurryMidiMessageSuperType::Channel => (0..Channel::COUNT)
+                BlurryMidiMessageSuperType::Channel => (0..16)
                     .map(|c| RawMidiMessage::channel_message(t, ch(c), U7::MIN, U7::MIN))
                     .collect(),
                 BlurryMidiMessageSuperType::SystemRealTime => {

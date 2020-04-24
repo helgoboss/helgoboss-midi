@@ -5,13 +5,18 @@ use derive_more::{Display, Error};
 pub struct ValueOutOfRangeError;
 
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
-// TODO Consider into_inner() method (https://rust-lang.github.io/api-guidelines/naming.html#c-case)
+// TODO Consider get() method (https://rust-lang.github.io/api-guidelines/naming.html)
+//  mmh, not so good because it exposes once more the internal representation which is actually not
+//  so important, and we want to prevent unwrapping as far as possible
+// TODO Consider implementing bitwise operations
 macro_rules! newtype {
     ($name: ident, $repr: ty, $max: literal, $factory: ident) => {
         #[cfg(feature = "serde")]
         use serde::{Deserialize, Serialize};
 
-        #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default)]
+        #[derive(
+            Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, derive_more::Display,
+        )]
         #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
         pub struct $name(pub(crate) $repr);
 
@@ -20,22 +25,29 @@ macro_rules! newtype {
 
             pub const MAX: Self = Self($max);
 
-            pub const COUNT: $repr = $max + 1;
-
-            pub fn is_valid<T: PartialOrd + From<$repr>>(number: T) -> bool {
-                number < Self::COUNT.into()
+            fn is_valid<T: PartialOrd + From<$repr>>(number: T) -> bool {
+                number <= $max.into()
             }
 
             /// Panics if given number is greater than MAX!
-            // TODO Not sure if this is a good idea. NonZeroU8 has a constructor which returns an
-            //  Option instead. And even this is probably obsolete because we have TryFrom.
+            //
+            // - Okay to panic here if we document the preconditions. Also used in example at https://doc.rust-lang.org/book/ch09-03-to-panic-or-not-to-panic.html
+            // - NonZeroU8's new returns an Option, but that's probably pre-TryFrom era
+            // - Not having a new() at all is probably not a good idea because new() is what most
+            //   people look for first (C-CTOR convention)
             pub fn new(number: $repr) -> Self {
                 assert!(Self::is_valid(number));
                 Self(number)
             }
 
+            // This is good practice
             pub const unsafe fn new_unchecked(number: $repr) -> Self {
                 Self(number)
+            }
+
+            // This aligns with C-GETTER convention and to std::num::NonZeroU8
+            pub fn get(self) -> $repr {
+                self.0
             }
         }
     };

@@ -124,8 +124,8 @@ pub trait MidiMessageFactory: Sized {
         unsafe {
             Self::from_bytes_unchecked(
                 build_status_byte(MidiMessageType::PitchBendChange.into(), channel),
-                U7((u16::from(pitch_bend_value) & 0x7f) as u8),
-                U7((u16::from(pitch_bend_value) >> 7) as u8),
+                U7((pitch_bend_value.get() & 0x7f) as u8),
+                U7((pitch_bend_value.get() >> 7) as u8),
             )
         }
     }
@@ -154,8 +154,8 @@ pub trait MidiMessageFactory: Sized {
         unsafe {
             Self::from_bytes_unchecked(
                 MidiMessageType::SongPositionPointer.into(),
-                U7((u16::from(position) & 0x7f) as u8),
-                U7((u16::from(position) >> 7) as u8),
+                U7((position.get() & 0x7f) as u8),
+                U7((position.get() >> 7) as u8),
             )
         }
     }
