@@ -1,5 +1,6 @@
 #[macro_use]
 mod newtype_macros;
+pub use newtype_macros::*;
 
 mod midi_message;
 pub use midi_message::*;

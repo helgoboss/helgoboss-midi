@@ -8,6 +8,7 @@ edition = "2018"
 num_enum = "0.4.2"
 strum = "0.18.0"
 strum_macros = "0.18.0"
+derive_more = "0.99.5"
 serde = { version = "1.0", optional = true, features = ["derive"] }
 serde_repr = { version = "0.1.5", optional = true }
 

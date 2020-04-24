@@ -1,3 +1,9 @@
+use derive_more::{Display, Error};
+
+#[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
+#[display(fmt = "value out of range")]
+pub struct ValueOutOfRangeError;
+
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
 // TODO Consider into_inner() method (https://rust-lang.github.io/api-guidelines/naming.html#c-case)
 macro_rules! newtype {
@@ -74,11 +80,11 @@ macro_rules! impl_from_primitive_to_newtype {
 macro_rules! impl_try_from_newtype_to_newtype {
     ($from: ty, $into: ty) => {
         impl std::convert::TryFrom<$from> for $into {
-            type Error = ();
+            type Error = $crate::ValueOutOfRangeError;
 
             fn try_from(value: $from) -> Result<Self, Self::Error> {
                 if !Self::is_valid(value.0) {
-                    return Err(());
+                    return Err($crate::ValueOutOfRangeError);
                 }
                 Ok(Self(value.0 as _))
             }
@@ -91,11 +97,11 @@ macro_rules! impl_try_from_newtype_to_newtype {
 macro_rules! impl_try_from_primitive_to_newtype {
     ($from: ty, $into: ty) => {
         impl std::convert::TryFrom<$from> for $into {
-            type Error = ();
+            type Error = $crate::ValueOutOfRangeError;
 
             fn try_from(value: $from) -> Result<Self, Self::Error> {
                 if !Self::is_valid(value) {
-                    return Err(());
+                    return Err($crate::ValueOutOfRangeError);
                 }
                 Ok(Self(value as _))
             }

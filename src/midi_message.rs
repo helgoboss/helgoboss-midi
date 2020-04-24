@@ -2,15 +2,17 @@ use crate::{
     build_14_bit_value_from_two_7_bit_values, Channel, ControllerNumber, KeyNumber,
     StructuredMidiMessage, U14, U4, U7,
 };
-use num_enum::{IntoPrimitive, TryFromPrimitive, TryFromPrimitiveError};
+use derive_more::{Display, Error};
+use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::convert::TryInto;
+use std::convert::{TryFrom, TryInto};
 #[allow(unused_imports)]
 use strum::IntoEnumIterator;
 use strum_macros::EnumIter;
+
 /// Trait to be implemented by struct representing a single primitive MIDI message. Only the three
 /// byte-returning methods need to be implemented, the rest is done by default methods. The
 /// advantage of this architecture is that we can have a unified API, no matter which underlying
@@ -448,18 +450,23 @@ fn extract_channel_from_status_byte(byte: u8) -> Channel {
     Channel(byte & 0x0f)
 }
 
+#[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
+#[display(fmt = "invalid status byte")]
+pub struct InvalidStatusByteError;
+
 pub(crate) fn extract_type_from_status_byte(
     status_byte: u8,
-) -> Result<MidiMessageType, TryFromPrimitiveError<MidiMessageType>> {
+) -> Result<MidiMessageType, InvalidStatusByteError> {
     let high_status_byte_nibble = extract_high_nibble_from_byte(status_byte);
-    if high_status_byte_nibble == 0xf {
+    let relevant_part = if high_status_byte_nibble == 0xf {
         // System message. The complete status byte makes up the type.
-        status_byte.try_into()
+        status_byte
     } else {
         // Channel message. Just the high nibble of the status byte makes up the type
         // (low nibble encodes channel).
-        build_byte_from_nibbles(high_status_byte_nibble, 0).try_into()
-    }
+        build_byte_from_nibbles(high_status_byte_nibble, 0)
+    };
+    MidiMessageType::try_from(relevant_part).map_err(|_| InvalidStatusByteError)
 }
 
 fn extract_low_nibble_from_byte(value: u8) -> U4 {
@@ -483,7 +490,6 @@ mod tests {
     use crate::{Channel, MidiMessageFactory, RawMidiMessage};
     #[cfg(feature = "serde")]
     use serde_json::json;
-    use std::any::Any;
 
     #[test]
     fn from_bytes_ok() {

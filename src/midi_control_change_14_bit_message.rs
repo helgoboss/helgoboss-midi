@@ -19,7 +19,7 @@ impl MidiControlChange14BitMessage {
         msb_controller_number: ControllerNumber,
         value: U14,
     ) -> MidiControlChange14BitMessage {
-        assert!(msb_controller_number.can_act_as_14_bit_msb());
+        assert!(msb_controller_number.corresponding_14_bit_lsb().is_some());
         MidiControlChange14BitMessage {
             channel,
             msb_controller_number,

@@ -114,15 +114,11 @@ impl ControllerNumber {
         self.0 < 64
     }
 
-    pub fn can_act_as_14_bit_msb(&self) -> bool {
-        self.0 < 32
-    }
-
-    pub fn corresponding_14_bit_lsb(&self) -> Result<ControllerNumber, ()> {
-        if !self.can_act_as_14_bit_msb() {
-            return Err(());
+    pub fn corresponding_14_bit_lsb(&self) -> Option<ControllerNumber> {
+        if self.0 >= 32 {
+            return None;
         }
-        Ok(ControllerNumber(self.0 + 32))
+        Some(ControllerNumber(self.0 + 32))
     }
 
     pub fn can_be_part_of_parameter_number_message(&self) -> bool {
