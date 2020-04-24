@@ -1,3 +1,5 @@
+#![doc(html_root_url = "https://docs.rs/helgoboss-midi/0.1.0")]
+
 #[macro_use]
 mod newtype_macros;
 pub use newtype_macros::*;
