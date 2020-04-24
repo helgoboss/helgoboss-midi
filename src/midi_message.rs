@@ -9,9 +9,6 @@ use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde")]
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::convert::{TryFrom, TryInto};
-#[allow(unused_imports)]
-use strum::IntoEnumIterator;
-use strum_macros::EnumIter;
 
 /// Trait to be implemented by struct representing a single primitive MIDI message. Only the three
 /// byte-returning methods need to be implemented, the rest is done by default methods. The
@@ -189,17 +186,7 @@ pub trait MidiMessage {
 
 // The most low-level type of a MIDI message
 #[derive(
-    Copy,
-    Clone,
-    Eq,
-    PartialEq,
-    Ord,
-    PartialOrd,
-    Hash,
-    Debug,
-    IntoPrimitive,
-    TryFromPrimitive,
-    EnumIter,
+    Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, IntoPrimitive, TryFromPrimitive,
 )]
 #[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
@@ -235,6 +222,9 @@ pub enum MidiMessageType {
 }
 
 impl MidiMessageType {
+    pub const MIN: u8 = 0x80;
+    pub const MAX: u8 = 0xFF;
+
     pub fn super_type(&self) -> BlurryMidiMessageSuperType {
         use BlurryMidiMessageSuperType::*;
         use MidiMessageType::*;
@@ -984,7 +974,8 @@ mod tests {
     #[test]
     fn structured_and_back() {
         // Given
-        let messages: Vec<RawMidiMessage> = MidiMessageType::iter()
+        let messages: Vec<RawMidiMessage> = (MidiMessageType::MIN..=MidiMessageType::MAX)
+            .flat_map(|repr| MidiMessageType::try_from(repr))
             .flat_map(move |t| match t.super_type() {
                 BlurryMidiMessageSuperType::Channel => (0..16)
                     .map(|c| RawMidiMessage::channel_message(t, ch(c), U7::MIN, U7::MIN))
