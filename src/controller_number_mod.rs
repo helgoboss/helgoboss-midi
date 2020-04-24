@@ -1,5 +1,5 @@
 // Basic newtype definition
-newtype!(ControllerNumber, u8, 127, controller_number);
+newtype!(name = ControllerNumber, repr = u8, max = 127);
 
 // From related newtype to this newtype and back
 impl_from_newtype_to_newtype!(ControllerNumber, crate::U7);

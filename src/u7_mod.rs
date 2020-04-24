@@ -1,5 +1,5 @@
 // Basic newtype definition
-newtype!(U7, u8, 127, u7);
+newtype!(name = U7, repr = u8, max = 127);
 
 // From lower newtypes to this newtype
 impl_from_newtype_to_newtype!(crate::U4, U7);

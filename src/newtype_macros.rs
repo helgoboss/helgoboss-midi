@@ -1,23 +1,24 @@
 use derive_more::{Display, Error};
 
+/// An error which can be returned when converting an integer type to another integer type with a
+/// smaller value range.
 #[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
 #[display(fmt = "value out of range")]
 pub struct ValueOutOfRangeError;
 
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
-// TODO Consider get() method (https://rust-lang.github.io/api-guidelines/naming.html)
-//  mmh, not so good because it exposes once more the internal representation which is actually not
-//  so important, and we want to prevent unwrapping as far as possible
-// TODO Consider implementing bitwise operations
 macro_rules! newtype {
-    ($name: ident, $repr: ty, $max: literal, $factory: ident) => {
-        #[cfg(feature = "serde")]
-        use serde::{Deserialize, Serialize};
-
+    (
+        $(#[$outer:meta])*
+        name = $name: ident,
+        repr = $repr: ty,
+        max = $max: literal
+    ) => {
+        $(#[$outer])*
         #[derive(
             Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, derive_more::Display,
         )]
-        #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name(pub(crate) $repr);
 
         impl $name {

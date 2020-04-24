@@ -1,5 +1,5 @@
 // Basic newtype definition
-newtype!(KeyNumber, u8, 127, key_number);
+newtype!(name = KeyNumber, repr = u8, max = 127);
 
 // From related newtype to this newtype and back
 impl_from_newtype_to_newtype!(KeyNumber, crate::U7);

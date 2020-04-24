@@ -1,5 +1,5 @@
 // Basic newtype definition
-newtype!(U4, u8, 15, u4);
+newtype!(name = U4, repr = u8, max = 15);
 
 // From lower newtypes to this newtype
 // -

@@ -1,5 +1,9 @@
 // Basic newtype definition
-newtype!(Channel, u8, 15, channel);
+
+newtype! {
+    #[doc = r" Channel"]
+    name = Channel, repr = u8, max = 15
+}
 
 // From related newtype to this newtype and back
 impl_from_newtype_to_newtype!(Channel, crate::U4);
