@@ -45,7 +45,7 @@ impl ControllerNumber {
         self.0 < 64
     }
 
-    /// If this controller number can be used for sending the most significant byte of a 14-bit
+    /// If this controller number can be used to send the most significant byte of a 14-bit
     /// Control Change message, this function returns the corresponding controller number that would
     /// be used to send the least significant byte of it.
     pub fn corresponding_14_bit_lsb_controller_number(&self) -> Option<ControllerNumber> {
@@ -61,7 +61,7 @@ impl ControllerNumber {
         matches!(self.0, 98 | 99 | 100 | 101 | 38 | 6)
     }
 
-    /// Returns whether this controller number is intended to be used for sending Channel Mode
+    /// Returns whether this controller number is intended to be used to send Channel Mode
     /// messages.
     pub fn is_channel_mode_message_controller_number(&self) -> bool {
         *self >= controller_numbers::RESET_ALL_CONTROLLERS
@@ -72,14 +72,16 @@ impl ControllerNumber {
 ///
 /// # Design
 ///
-/// These are not associated constants of `ControllerNumber` because then we could only access them
-/// prefixed with `ControllerNumber::`. Making `ControllerNumber` an enum would have been the
+/// These are not associated constants of [`ControllerNumber`] because then we could only access
+/// them prefixed with `ControllerNumber::`. Making [`ControllerNumber`] an enum would have been the
 /// alternative, but this has other downsides such as having to introduce a special variant for
 /// undefined controllers and unnecessary conversion from and to integers. From the MIDI spec
 /// perspective, a controller number seems closer to a plain 7-bit integer than to an enum with
 /// well-defined values. Not all of the controller numbers have a special meaning, and if they do,
-/// this meaning is not necessarily important. In practice, controller numbers are often used for
+/// this meaning is not necessarily important. In practice, controller numbers are often for
 /// other things than they were intended for, especially the exotic ones.
+///
+/// [`ControllerNumber`]: struct.ControllerNumber.html
 pub mod controller_numbers {
     use crate::ControllerNumber;
 

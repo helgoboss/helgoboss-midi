@@ -6,12 +6,12 @@
 //! Most of the functions contained in this module panic if a passed value doesn't conform to the
 //! value range of the corresponding type.
 use crate::{
-    Channel, ControllerNumber, KeyNumber, MidiControlChange14BitMessage, MidiMessageFactory,
-    MidiParameterNumberMessage, MidiTimeCodeQuarterFrame, RawMidiMessage, U14, U4, U7,
+    Channel, ControlChange14BitMessage, ControllerNumber, KeyNumber, ParameterNumberMessage,
+    RawShortMessage, ShortMessageFactory, TimeCodeQuarterFrame, U14, U4, U7,
 };
 use std::convert::TryInto;
 
-type Msg = RawMidiMessage;
+type Msg = RawShortMessage;
 
 use channel as ch;
 use controller_number as cn;
@@ -41,7 +41,7 @@ pub fn controller_number(value: u8) -> ControllerNumber {
     value.try_into().unwrap()
 }
 
-pub fn message(status_byte: u8, data_byte_1: u8, data_byte_2: u8) -> Msg {
+pub fn short(status_byte: u8, data_byte_1: u8, data_byte_2: u8) -> Msg {
     Msg::from_bytes((status_byte, u7(data_byte_1), u7(data_byte_2))).unwrap()
 }
 
@@ -76,8 +76,8 @@ pub fn system_exclusive_start() -> Msg {
     Msg::system_exclusive_start()
 }
 
-pub fn midi_time_code_quarter_frame(frame: MidiTimeCodeQuarterFrame) -> Msg {
-    Msg::midi_time_code_quarter_frame(frame)
+pub fn time_code_quarter_frame(frame: TimeCodeQuarterFrame) -> Msg {
+    Msg::time_code_quarter_frame(frame)
 }
 
 pub fn song_position_pointer(position: u16) -> Msg {
@@ -124,22 +124,22 @@ pub fn control_change_14_bit(
     channel: u8,
     msb_controller_number: u8,
     value: u16,
-) -> MidiControlChange14BitMessage {
-    MidiControlChange14BitMessage::new(ch(channel), cn(msb_controller_number), u14(value))
+) -> ControlChange14BitMessage {
+    ControlChange14BitMessage::new(ch(channel), cn(msb_controller_number), u14(value))
 }
 
-pub fn nrpn(channel: u8, number: u16, value: u8) -> MidiParameterNumberMessage {
-    MidiParameterNumberMessage::non_registered_7_bit(ch(channel), u14(number), u7(value))
+pub fn nrpn(channel: u8, number: u16, value: u8) -> ParameterNumberMessage {
+    ParameterNumberMessage::non_registered_7_bit(ch(channel), u14(number), u7(value))
 }
 
-pub fn nrpn_14_bit(channel: u8, number: u16, value: u16) -> MidiParameterNumberMessage {
-    MidiParameterNumberMessage::non_registered_14_bit(ch(channel), u14(number), u14(value))
+pub fn nrpn_14_bit(channel: u8, number: u16, value: u16) -> ParameterNumberMessage {
+    ParameterNumberMessage::non_registered_14_bit(ch(channel), u14(number), u14(value))
 }
 
-pub fn rpn(channel: u8, number: u16, value: u8) -> MidiParameterNumberMessage {
-    MidiParameterNumberMessage::registered_7_bit(ch(channel), u14(number), u7(value))
+pub fn rpn(channel: u8, number: u16, value: u8) -> ParameterNumberMessage {
+    ParameterNumberMessage::registered_7_bit(ch(channel), u14(number), u7(value))
 }
 
-pub fn rpn_14_bit(channel: u8, number: u16, value: u16) -> MidiParameterNumberMessage {
-    MidiParameterNumberMessage::registered_14_bit(ch(channel), u14(number), u14(value))
+pub fn rpn_14_bit(channel: u8, number: u16, value: u16) -> ParameterNumberMessage {
+    ParameterNumberMessage::registered_14_bit(ch(channel), u14(number), u14(value))
 }

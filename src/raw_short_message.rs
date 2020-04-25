@@ -1,31 +1,31 @@
-use crate::{InvalidStatusByteError, MidiMessage, MidiMessageFactory, U7};
+use crate::{InvalidStatusByteError, ShortMessage, ShortMessageFactory, U7};
 use derive_more::*;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
-/// A single MIDI message implemented as a tuple of bytes.
+/// A short message implemented as a tuple of bytes.
 ///
 /// The struct's size in memory is currently 3 bytes.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Into)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct RawMidiMessage((u8, U7, U7));
+pub struct RawShortMessage((u8, U7, U7));
 
-impl MidiMessageFactory for RawMidiMessage {
+impl ShortMessageFactory for RawShortMessage {
     unsafe fn from_bytes_unchecked(bytes: (u8, U7, U7)) -> Self {
         Self(bytes)
     }
 }
 
-impl TryFrom<(u8, U7, U7)> for RawMidiMessage {
+impl TryFrom<(u8, U7, U7)> for RawShortMessage {
     type Error = InvalidStatusByteError;
 
     fn try_from(value: (u8, U7, U7)) -> Result<Self, Self::Error> {
-        RawMidiMessage::from_bytes(value)
+        RawShortMessage::from_bytes(value)
     }
 }
 
-impl MidiMessage for RawMidiMessage {
+impl ShortMessage for RawShortMessage {
     fn status_byte(&self) -> u8 {
         (self.0).0
     }

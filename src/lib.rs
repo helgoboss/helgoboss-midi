@@ -2,37 +2,37 @@
 //! Interfaces, data structures and utilities for dealing with MIDI messages according to the MIDI
 //! 1.0 specification.
 //!
-//! The core type is [`MidiMessage`].
+//! The core type is [`ShortMessage`].
 //!
-//! [`MidiMessage`]: trait.MidiMessage.html
+//! [`ShortMessage`]: trait.ShortMessage.html
 
 #[macro_use]
 mod newtype_macros;
 pub use newtype_macros::*;
 
-mod midi_message;
-pub use midi_message::*;
+mod short_message;
+pub use short_message::*;
 
-mod midi_message_factory;
-pub use midi_message_factory::*;
+mod short_message_factory;
+pub use short_message_factory::*;
 
-mod structured_midi_message;
-pub use structured_midi_message::*;
+mod structured_short_message;
+pub use structured_short_message::*;
 
-mod raw_midi_message;
-pub use raw_midi_message::*;
+mod raw_short_message;
+pub use raw_short_message::*;
 
-mod midi_control_change_14_bit_message;
-pub use midi_control_change_14_bit_message::*;
+mod control_change_14_bit_message;
+pub use control_change_14_bit_message::*;
 
-mod midi_control_change_14_bit_message_scanner;
-pub use midi_control_change_14_bit_message_scanner::*;
+mod control_change_14_bit_message_scanner;
+pub use control_change_14_bit_message_scanner::*;
 
-mod midi_parameter_number_message;
-pub use midi_parameter_number_message::*;
+mod parameter_number_message;
+pub use parameter_number_message::*;
 
-mod midi_parameter_number_message_scanner;
-pub use midi_parameter_number_message_scanner::*;
+mod parameter_number_message_scanner;
+pub use parameter_number_message_scanner::*;
 
 // I added the _mod suffix because of intellij-rust issue 4992
 mod channel_mod;

@@ -1,14 +1,14 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, build_status_byte, extract_channel_from_status_byte,
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
-    extract_type_from_status_byte, Channel, ControllerNumber, KeyNumber, MidiMessage,
-    MidiMessageFactory, MidiMessageType, MidiTimeCodeQuarterFrame, U14, U7,
+    extract_type_from_status_byte, Channel, ControllerNumber, KeyNumber, ShortMessage,
+    ShortMessageFactory, ShortMessageType, TimeCodeQuarterFrame, U14, U7,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// A single MIDI message implemented as an enum where each variant contains exactly the data which
-/// is relevant for the particular message type.
+/// A short message implemented as an enum where each variant contains exactly the data which is
+/// relevant for the particular message type.
 ///
 /// This enum is primarily intended for read-only usage via pattern matching. For that reason each
 /// variant is a struct-like enum, which is ideal for pattern matching while it is less ideal for
@@ -17,7 +17,7 @@ use serde::{Deserialize, Serialize};
 /// The enum's size in memory is currently 4 bytes.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub enum StructuredMidiMessage {
+pub enum StructuredShortMessage {
     // Channel messages
     NoteOff {
         channel: Channel,
@@ -54,7 +54,7 @@ pub enum StructuredMidiMessage {
     // System Exclusive messages
     SystemExclusiveStart,
     // System Common messages
-    MidiTimeCodeQuarterFrame(MidiTimeCodeQuarterFrame),
+    TimeCodeQuarterFrame(TimeCodeQuarterFrame),
     SongPositionPointer {
         position: U14,
     },
@@ -76,114 +76,116 @@ pub enum StructuredMidiMessage {
     SystemRealTimeUndefined2,
 }
 
-impl MidiMessageFactory for StructuredMidiMessage {
+impl ShortMessageFactory for StructuredShortMessage {
     unsafe fn from_bytes_unchecked((status_byte, data_byte_1, data_byte_2): (u8, U7, U7)) -> Self {
-        use MidiMessageType::*;
+        use ShortMessageType::*;
         let r#type = extract_type_from_status_byte(status_byte).unwrap();
         match r#type {
-            NoteOff => StructuredMidiMessage::NoteOff {
+            NoteOff => StructuredShortMessage::NoteOff {
                 channel: extract_channel_from_status_byte(status_byte),
                 key_number: data_byte_1.into(),
                 velocity: data_byte_2,
             },
-            NoteOn => StructuredMidiMessage::NoteOn {
+            NoteOn => StructuredShortMessage::NoteOn {
                 channel: extract_channel_from_status_byte(status_byte),
                 key_number: data_byte_1.into(),
                 velocity: data_byte_2,
             },
-            PolyphonicKeyPressure => StructuredMidiMessage::PolyphonicKeyPressure {
+            PolyphonicKeyPressure => StructuredShortMessage::PolyphonicKeyPressure {
                 channel: extract_channel_from_status_byte(status_byte),
                 key_number: data_byte_1.into(),
                 pressure_amount: data_byte_2,
             },
-            ControlChange => StructuredMidiMessage::ControlChange {
+            ControlChange => StructuredShortMessage::ControlChange {
                 channel: extract_channel_from_status_byte(status_byte),
                 controller_number: data_byte_1.into(),
                 control_value: data_byte_2,
             },
-            ProgramChange => StructuredMidiMessage::ProgramChange {
+            ProgramChange => StructuredShortMessage::ProgramChange {
                 channel: extract_channel_from_status_byte(status_byte),
                 program_number: data_byte_1.into(),
             },
-            ChannelPressure => StructuredMidiMessage::ChannelPressure {
+            ChannelPressure => StructuredShortMessage::ChannelPressure {
                 channel: extract_channel_from_status_byte(status_byte),
                 pressure_amount: data_byte_1,
             },
-            PitchBendChange => StructuredMidiMessage::PitchBendChange {
+            PitchBendChange => StructuredShortMessage::PitchBendChange {
                 channel: extract_channel_from_status_byte(status_byte),
                 pitch_bend_value: build_14_bit_value_from_two_7_bit_values(
                     data_byte_2,
                     data_byte_1,
                 ),
             },
-            SystemExclusiveStart => StructuredMidiMessage::SystemExclusiveStart,
-            MidiTimeCodeQuarterFrame => {
-                StructuredMidiMessage::MidiTimeCodeQuarterFrame(data_byte_1.into())
+            SystemExclusiveStart => StructuredShortMessage::SystemExclusiveStart,
+            TimeCodeQuarterFrame => {
+                StructuredShortMessage::TimeCodeQuarterFrame(data_byte_1.into())
             }
-            SongPositionPointer => StructuredMidiMessage::SongPositionPointer {
+            SongPositionPointer => StructuredShortMessage::SongPositionPointer {
                 position: build_14_bit_value_from_two_7_bit_values(data_byte_2, data_byte_1),
             },
-            SongSelect => StructuredMidiMessage::SongSelect {
+            SongSelect => StructuredShortMessage::SongSelect {
                 song_number: data_byte_1,
             },
-            TuneRequest => StructuredMidiMessage::TuneRequest,
-            SystemExclusiveEnd => StructuredMidiMessage::SystemExclusiveEnd,
-            TimingClock => StructuredMidiMessage::TimingClock,
-            Start => StructuredMidiMessage::Start,
-            Continue => StructuredMidiMessage::Continue,
-            Stop => StructuredMidiMessage::Stop,
-            ActiveSensing => StructuredMidiMessage::ActiveSensing,
-            SystemReset => StructuredMidiMessage::SystemReset,
-            SystemCommonUndefined1 => StructuredMidiMessage::SystemCommonUndefined1,
-            SystemCommonUndefined2 => StructuredMidiMessage::SystemCommonUndefined2,
-            SystemRealTimeUndefined1 => StructuredMidiMessage::SystemRealTimeUndefined1,
-            SystemRealTimeUndefined2 => StructuredMidiMessage::SystemRealTimeUndefined2,
+            TuneRequest => StructuredShortMessage::TuneRequest,
+            SystemExclusiveEnd => StructuredShortMessage::SystemExclusiveEnd,
+            TimingClock => StructuredShortMessage::TimingClock,
+            Start => StructuredShortMessage::Start,
+            Continue => StructuredShortMessage::Continue,
+            Stop => StructuredShortMessage::Stop,
+            ActiveSensing => StructuredShortMessage::ActiveSensing,
+            SystemReset => StructuredShortMessage::SystemReset,
+            SystemCommonUndefined1 => StructuredShortMessage::SystemCommonUndefined1,
+            SystemCommonUndefined2 => StructuredShortMessage::SystemCommonUndefined2,
+            SystemRealTimeUndefined1 => StructuredShortMessage::SystemRealTimeUndefined1,
+            SystemRealTimeUndefined2 => StructuredShortMessage::SystemRealTimeUndefined2,
         }
     }
 }
 
-impl MidiMessage for StructuredMidiMessage {
+impl ShortMessage for StructuredShortMessage {
     fn status_byte(&self) -> u8 {
-        use StructuredMidiMessage::*;
+        use StructuredShortMessage::*;
         match self {
-            NoteOff { channel, .. } => build_status_byte(MidiMessageType::NoteOff.into(), *channel),
-            NoteOn { channel, .. } => build_status_byte(MidiMessageType::NoteOn.into(), *channel),
+            NoteOff { channel, .. } => {
+                build_status_byte(ShortMessageType::NoteOff.into(), *channel)
+            }
+            NoteOn { channel, .. } => build_status_byte(ShortMessageType::NoteOn.into(), *channel),
             PolyphonicKeyPressure { channel, .. } => {
-                build_status_byte(MidiMessageType::PolyphonicKeyPressure.into(), *channel)
+                build_status_byte(ShortMessageType::PolyphonicKeyPressure.into(), *channel)
             }
             ControlChange { channel, .. } => {
-                build_status_byte(MidiMessageType::ControlChange.into(), *channel)
+                build_status_byte(ShortMessageType::ControlChange.into(), *channel)
             }
             ProgramChange { channel, .. } => {
-                build_status_byte(MidiMessageType::ProgramChange.into(), *channel)
+                build_status_byte(ShortMessageType::ProgramChange.into(), *channel)
             }
             ChannelPressure { channel, .. } => {
-                build_status_byte(MidiMessageType::ChannelPressure.into(), *channel)
+                build_status_byte(ShortMessageType::ChannelPressure.into(), *channel)
             }
             PitchBendChange { channel, .. } => {
-                build_status_byte(MidiMessageType::PitchBendChange.into(), *channel)
+                build_status_byte(ShortMessageType::PitchBendChange.into(), *channel)
             }
-            SystemExclusiveStart => MidiMessageType::SystemExclusiveStart.into(),
-            MidiTimeCodeQuarterFrame(_) => MidiMessageType::MidiTimeCodeQuarterFrame.into(),
-            SongPositionPointer { .. } => MidiMessageType::SongPositionPointer.into(),
-            SongSelect { .. } => MidiMessageType::SongSelect.into(),
-            TuneRequest => MidiMessageType::TuneRequest.into(),
-            SystemExclusiveEnd => MidiMessageType::SystemExclusiveEnd.into(),
-            TimingClock => MidiMessageType::TimingClock.into(),
-            Start => MidiMessageType::Start.into(),
-            Continue => MidiMessageType::Continue.into(),
-            Stop => MidiMessageType::Stop.into(),
-            ActiveSensing => MidiMessageType::ActiveSensing.into(),
-            SystemReset => MidiMessageType::SystemReset.into(),
-            SystemCommonUndefined1 => MidiMessageType::SystemCommonUndefined1.into(),
-            SystemCommonUndefined2 => MidiMessageType::SystemCommonUndefined2.into(),
-            SystemRealTimeUndefined1 => MidiMessageType::SystemRealTimeUndefined1.into(),
-            SystemRealTimeUndefined2 => MidiMessageType::SystemRealTimeUndefined2.into(),
+            SystemExclusiveStart => ShortMessageType::SystemExclusiveStart.into(),
+            TimeCodeQuarterFrame(_) => ShortMessageType::TimeCodeQuarterFrame.into(),
+            SongPositionPointer { .. } => ShortMessageType::SongPositionPointer.into(),
+            SongSelect { .. } => ShortMessageType::SongSelect.into(),
+            TuneRequest => ShortMessageType::TuneRequest.into(),
+            SystemExclusiveEnd => ShortMessageType::SystemExclusiveEnd.into(),
+            TimingClock => ShortMessageType::TimingClock.into(),
+            Start => ShortMessageType::Start.into(),
+            Continue => ShortMessageType::Continue.into(),
+            Stop => ShortMessageType::Stop.into(),
+            ActiveSensing => ShortMessageType::ActiveSensing.into(),
+            SystemReset => ShortMessageType::SystemReset.into(),
+            SystemCommonUndefined1 => ShortMessageType::SystemCommonUndefined1.into(),
+            SystemCommonUndefined2 => ShortMessageType::SystemCommonUndefined2.into(),
+            SystemRealTimeUndefined1 => ShortMessageType::SystemRealTimeUndefined1.into(),
+            SystemRealTimeUndefined2 => ShortMessageType::SystemRealTimeUndefined2.into(),
         }
     }
 
     fn data_byte_1(&self) -> U7 {
-        use StructuredMidiMessage::*;
+        use StructuredShortMessage::*;
         match self {
             NoteOff { key_number, .. } => (*key_number).into(),
             NoteOn { key_number, .. } => (*key_number).into(),
@@ -199,7 +201,7 @@ impl MidiMessage for StructuredMidiMessage {
                 pitch_bend_value, ..
             } => extract_low_7_bit_value_from_14_bit_value(*pitch_bend_value),
             SystemExclusiveStart => U7::MIN,
-            MidiTimeCodeQuarterFrame(frame) => (*frame).into(),
+            TimeCodeQuarterFrame(frame) => (*frame).into(),
             SongPositionPointer { position } => {
                 extract_low_7_bit_value_from_14_bit_value(*position)
             }
@@ -220,7 +222,7 @@ impl MidiMessage for StructuredMidiMessage {
     }
 
     fn data_byte_2(&self) -> U7 {
-        use StructuredMidiMessage::*;
+        use StructuredShortMessage::*;
         match self {
             NoteOff { velocity, .. } => *velocity,
             NoteOn { velocity, .. } => *velocity,
@@ -234,7 +236,7 @@ impl MidiMessage for StructuredMidiMessage {
                 pitch_bend_value, ..
             } => extract_high_7_bit_value_from_14_bit_value(*pitch_bend_value),
             SystemExclusiveStart => U7::MIN,
-            MidiTimeCodeQuarterFrame(_) => U7::MIN,
+            TimeCodeQuarterFrame(_) => U7::MIN,
             SongPositionPointer { position } => {
                 extract_high_7_bit_value_from_14_bit_value(*position)
             }
@@ -255,7 +257,7 @@ impl MidiMessage for StructuredMidiMessage {
     }
 
     // Slight optimization
-    fn to_structured(&self) -> StructuredMidiMessage {
+    fn to_structured(&self) -> StructuredShortMessage {
         self.clone()
     }
 }

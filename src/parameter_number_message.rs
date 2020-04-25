@@ -1,6 +1,6 @@
 use crate::{
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
-    MidiMessageFactory, U14, U7,
+    ShortMessageFactory, U14, U7,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -8,14 +8,14 @@ use serde::{Deserialize, Serialize};
 /// A MIDI Parameter Number message, either registered (RPN) or non-registered (NRPN).
 ///
 /// MIDI systems emit those by sending up to 4 single Control Change messages in a row. The
-/// [`MidiParameterNumberMessageScanner`] can be used to extract such messages from a stream of
-/// [`MidiMessage`]s.
+/// [`ParameterNumberMessageScanner`] can be used to extract such messages from a stream of
+/// [`ShortMessage`]s.
 ///
-/// [`MidiMessage`]: trait.MidiMessage.html
-/// [`MidiParameterNumberMessageScanner`]: struct.MidiParameterNumberMessageScanner.html
+/// [`ShortMessage`]: trait.ShortMessage.html
+/// [`ParameterNumberMessageScanner`]: struct.ParameterNumberMessageScanner.html
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct MidiParameterNumberMessage {
+pub struct ParameterNumberMessage {
     channel: Channel,
     number: U14,
     value: U14,
@@ -23,13 +23,13 @@ pub struct MidiParameterNumberMessage {
     is_14_bit: bool,
 }
 
-impl MidiParameterNumberMessage {
+impl ParameterNumberMessage {
     /// Creates an NRPN message with a 7-bit value.
     pub fn non_registered_7_bit(
         channel: Channel,
         number: U14,
         value: U7,
-    ) -> MidiParameterNumberMessage {
+    ) -> ParameterNumberMessage {
         Self::seven_bit(channel, number, value, false)
     }
 
@@ -38,25 +38,17 @@ impl MidiParameterNumberMessage {
         channel: Channel,
         number: U14,
         value: U14,
-    ) -> MidiParameterNumberMessage {
+    ) -> ParameterNumberMessage {
         Self::fourteen_bit(channel, number, value, false)
     }
 
     /// Creates an RPN message with a 7-bit value.
-    pub fn registered_7_bit(
-        channel: Channel,
-        number: U14,
-        value: U7,
-    ) -> MidiParameterNumberMessage {
+    pub fn registered_7_bit(channel: Channel, number: U14, value: U7) -> ParameterNumberMessage {
         Self::seven_bit(channel, number, value, true)
     }
 
     /// Creates an RPN message with a 14-bit value.
-    pub fn registered_14_bit(
-        channel: Channel,
-        number: U14,
-        value: U14,
-    ) -> MidiParameterNumberMessage {
+    pub fn registered_14_bit(channel: Channel, number: U14, value: U14) -> ParameterNumberMessage {
         Self::fourteen_bit(channel, number, value, true)
     }
 
@@ -65,8 +57,8 @@ impl MidiParameterNumberMessage {
         number: U14,
         value: U7,
         is_registered: bool,
-    ) -> MidiParameterNumberMessage {
-        MidiParameterNumberMessage {
+    ) -> ParameterNumberMessage {
+        ParameterNumberMessage {
             channel,
             number,
             value: value.into(),
@@ -80,8 +72,8 @@ impl MidiParameterNumberMessage {
         number: U14,
         value: U14,
         is_registered: bool,
-    ) -> MidiParameterNumberMessage {
-        MidiParameterNumberMessage {
+    ) -> ParameterNumberMessage {
+        ParameterNumberMessage {
             channel,
             number,
             value,
@@ -117,12 +109,12 @@ impl MidiParameterNumberMessage {
         self.is_registered
     }
 
-    /// Translates this message into up to 4 single 7-bit Control Change MIDI messages, which need
-    /// to be sent in a row in order to encode this (N)RPN message.
+    /// Translates this message into up to 4 short Control Change messages, which need to be sent in
+    /// a row in order to encode this (N)RPN message.
     ///
     /// If this message has a 14-bit value, all returned messages are `Some`. If it has a 7-bit
     /// value only, the last one is `None`.
-    pub fn to_midi_messages<T: MidiMessageFactory>(&self) -> [Option<T>; 4] {
+    pub fn to_short_messages<T: ShortMessageFactory>(&self) -> [Option<T>; 4] {
         use crate::controller_numbers::*;
         let mut messages = [None, None, None, None];
         let mut i = 0;
@@ -171,9 +163,9 @@ impl MidiParameterNumberMessage {
     }
 }
 
-impl<T: MidiMessageFactory> From<MidiParameterNumberMessage> for [Option<T>; 4] {
-    fn from(msg: MidiParameterNumberMessage) -> Self {
-        msg.to_midi_messages()
+impl<T: ShortMessageFactory> From<ParameterNumberMessage> for [Option<T>; 4] {
+    fn from(msg: ParameterNumberMessage) -> Self {
+        msg.to_short_messages()
     }
 }
 
@@ -181,12 +173,12 @@ impl<T: MidiMessageFactory> From<MidiParameterNumberMessage> for [Option<T>; 4] 
 mod tests {
     use super::*;
     use crate::test_util::{channel as ch, controller_number as cn, u14, u7};
-    use crate::RawMidiMessage;
+    use crate::RawShortMessage;
 
     #[test]
     fn parameter_number_messages_14_bit() {
         // Given
-        let msg = MidiParameterNumberMessage::registered_14_bit(ch(0), u14(420), u14(15000));
+        let msg = ParameterNumberMessage::registered_14_bit(ch(0), u14(420), u14(15000));
         // When
         // Then
         assert_eq!(msg.channel(), ch(0));
@@ -194,14 +186,14 @@ mod tests {
         assert_eq!(msg.value(), u14(15000));
         assert!(msg.is_14_bit());
         assert!(msg.is_registered());
-        let midi_msgs: [Option<RawMidiMessage>; 4] = msg.to_midi_messages();
+        let short_msgs: [Option<RawShortMessage>; 4] = msg.to_short_messages();
         assert_eq!(
-            midi_msgs,
+            short_msgs,
             [
-                Some(RawMidiMessage::control_change(ch(0), cn(101), u7(3))),
-                Some(RawMidiMessage::control_change(ch(0), cn(100), u7(36))),
-                Some(RawMidiMessage::control_change(ch(0), cn(38), u7(24))),
-                Some(RawMidiMessage::control_change(ch(0), cn(6), u7(117))),
+                Some(RawShortMessage::control_change(ch(0), cn(101), u7(3))),
+                Some(RawShortMessage::control_change(ch(0), cn(100), u7(36))),
+                Some(RawShortMessage::control_change(ch(0), cn(38), u7(24))),
+                Some(RawShortMessage::control_change(ch(0), cn(6), u7(117))),
             ]
         );
     }
@@ -209,13 +201,13 @@ mod tests {
     #[test]
     #[should_panic]
     fn parameter_number_messages_7_bit_panic() {
-        MidiParameterNumberMessage::non_registered_7_bit(ch(0), u14(420), u7(255));
+        ParameterNumberMessage::non_registered_7_bit(ch(0), u14(420), u7(255));
     }
 
     #[test]
     fn parameter_number_messages_7_bit() {
         // Given
-        let msg = MidiParameterNumberMessage::non_registered_7_bit(ch(2), u14(421), u7(126));
+        let msg = ParameterNumberMessage::non_registered_7_bit(ch(2), u14(421), u7(126));
         // When
         // Then
         assert_eq!(msg.channel(), ch(2));
@@ -223,13 +215,13 @@ mod tests {
         assert_eq!(msg.value(), u14(126));
         assert!(!msg.is_14_bit());
         assert!(!msg.is_registered());
-        let midi_msgs: [Option<RawMidiMessage>; 4] = msg.to_midi_messages();
+        let short_msgs: [Option<RawShortMessage>; 4] = msg.to_short_messages();
         assert_eq!(
-            midi_msgs,
+            short_msgs,
             [
-                Some(RawMidiMessage::control_change(ch(2), cn(99), u7(3))),
-                Some(RawMidiMessage::control_change(ch(2), cn(98), u7(37))),
-                Some(RawMidiMessage::control_change(ch(2), cn(6), u7(126))),
+                Some(RawShortMessage::control_change(ch(2), cn(99), u7(3))),
+                Some(RawShortMessage::control_change(ch(2), cn(98), u7(37))),
+                Some(RawShortMessage::control_change(ch(2), cn(6), u7(126))),
                 None,
             ]
         );

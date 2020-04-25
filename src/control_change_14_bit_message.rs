@@ -1,29 +1,29 @@
 use crate::{
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
-    ControllerNumber, MidiMessageFactory, U14,
+    ControllerNumber, ShortMessageFactory, U14,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
 /// A 14-bit MIDI Control Change message.
 ///
-/// Unlike a [`MidiMessage`] of type [`MidiMessageType::ControlChange`], this one supports 14-bit
+/// Unlike a [`ShortMessage`] of type [`ShortMessageType::ControlChange`], this one supports 14-bit
 /// resolution, that means 16384 different values instead of only 128. MIDI systems emit those by
-/// sending 2 single Control Change messages in a row. The [`MidiControlChange14BitMessageScanner`]
-/// can be used to extract such messages from a stream of [`MidiMessage`]s.
+/// sending 2 single Control Change messages in a row. The [`ControlChange14BitMessageScanner`]
+/// can be used to extract such messages from a stream of [`ShortMessage`]s.
 ///
-/// [`MidiMessage`]: trait.MidiMessage.html
-/// [`MidiMessageType::ControlChange`]: enum.MidiMessageType.html#variant.ControlChange
-/// [`MidiControlChange14BitMessageScanner`]: struct.MidiControlChange14BitMessageScanner.html
+/// [`ShortMessage`]: trait.ShortMessage.html
+/// [`ShortMessageType::ControlChange`]: enum.ShortMessageType.html#variant.ControlChange
+/// [`ControlChange14BitMessageScanner`]: struct.ControlChange14BitMessageScanner.html
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
-pub struct MidiControlChange14BitMessage {
+pub struct ControlChange14BitMessage {
     channel: Channel,
     msb_controller_number: ControllerNumber,
     value: U14,
 }
 
-impl MidiControlChange14BitMessage {
+impl ControlChange14BitMessage {
     /// Creates a 14-bit Control Change message.
     ///
     /// # Panics
@@ -34,13 +34,13 @@ impl MidiControlChange14BitMessage {
         channel: Channel,
         msb_controller_number: ControllerNumber,
         value: U14,
-    ) -> MidiControlChange14BitMessage {
+    ) -> ControlChange14BitMessage {
         assert!(
             msb_controller_number
                 .corresponding_14_bit_lsb_controller_number()
                 .is_some()
         );
-        MidiControlChange14BitMessage {
+        ControlChange14BitMessage {
             channel,
             msb_controller_number,
             value,
@@ -69,9 +69,9 @@ impl MidiControlChange14BitMessage {
         self.value
     }
 
-    /// Translates this message into 2 single 7-bit Control Change MIDI messages, which need to be
-    /// sent in a row in order to encode this 14-bit Control Change message.
-    pub fn to_midi_messages<T: MidiMessageFactory>(&self) -> [T; 2] {
+    /// Translates this message into 2 short messages, which need to be sent in a row in order to
+    /// encode this 14-bit Control Change message.
+    pub fn to_short_messages<T: ShortMessageFactory>(&self) -> [T; 2] {
         [
             T::control_change(
                 self.channel,
@@ -87,9 +87,9 @@ impl MidiControlChange14BitMessage {
     }
 }
 
-impl<T: MidiMessageFactory> From<MidiControlChange14BitMessage> for [T; 2] {
-    fn from(msg: MidiControlChange14BitMessage) -> Self {
-        msg.to_midi_messages()
+impl<T: ShortMessageFactory> From<ControlChange14BitMessage> for [T; 2] {
+    fn from(msg: ControlChange14BitMessage) -> Self {
+        msg.to_short_messages()
     }
 }
 
@@ -97,27 +97,27 @@ impl<T: MidiMessageFactory> From<MidiControlChange14BitMessage> for [T; 2] {
 mod tests {
     use super::*;
     use crate::test_util::{channel as ch, controller_number as cn, u14, u7};
-    use crate::RawMidiMessage;
+    use crate::RawShortMessage;
 
     #[test]
     fn basics() {
         // Given
-        let msg = MidiControlChange14BitMessage::new(ch(5), cn(2), u14(1057));
+        let msg = ControlChange14BitMessage::new(ch(5), cn(2), u14(1057));
         // When
         // Then
         assert_eq!(msg.channel(), ch(5));
         assert_eq!(msg.msb_controller_number(), cn(2));
         assert_eq!(msg.lsb_controller_number(), cn(34));
         assert_eq!(msg.value(), u14(1057));
-        let midi_msgs = msg.to_midi_messages();
+        let short_msgs = msg.to_short_messages();
         assert_eq!(
-            midi_msgs,
+            short_msgs,
             [
-                RawMidiMessage::control_change(ch(5), cn(2), u7(8)),
-                RawMidiMessage::control_change(ch(5), cn(34), u7(33))
+                RawShortMessage::control_change(ch(5), cn(2), u7(8)),
+                RawShortMessage::control_change(ch(5), cn(34), u7(33))
             ]
         );
-        let midi_msgs_2: [RawMidiMessage; 2] = msg.into();
-        assert_eq!(midi_msgs_2, midi_msgs);
+        let short_msgs_2: [RawShortMessage; 2] = msg.into();
+        assert_eq!(short_msgs_2, short_msgs);
     }
 }
