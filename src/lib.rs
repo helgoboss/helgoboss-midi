@@ -1,8 +1,8 @@
 #![doc(html_root_url = "https://docs.rs/helgoboss-midi/0.1.0")]
-//! Data structures and utilities for dealing with MIDI messages according to the MIDI 1.0
-//! specification.
+//! Interfaces, data structures and utilities for dealing with MIDI messages according to the MIDI
+//! 1.0 specification.
 //!
-//! The most important type in here is [`MidiMessage`].
+//! The core type is [`MidiMessage`].
 //!
 //! [`MidiMessage`]: trait.MidiMessage.html
 

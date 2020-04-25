@@ -11,6 +11,10 @@ use serde::{Deserialize, Serialize};
 /// resolution, that means 16384 different values instead of only 128. MIDI systems emit those by
 /// sending 2 single Control Change messages in a row. The [`MidiControlChange14BitMessageScanner`]
 /// can be used to extract such messages from a stream of [`MidiMessage`]s.
+///
+/// [`MidiMessage`]: trait.MidiMessage.html
+/// [`MidiMessageType::ControlChange`]: enum.MidiMessageType.html#variant.ControlChange
+/// [`MidiControlChange14BitMessageScanner`]: struct.MidiControlChange14BitMessageScanner.html
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MidiControlChange14BitMessage {

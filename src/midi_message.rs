@@ -220,7 +220,7 @@ pub trait MidiMessage {
     }
 }
 
-/// The most fine-grained type of a MIDI message.
+/// The most fine-grained classification of MIDI messages.
 ///
 /// Variants can be converted to and from `u8`. In case of channel messages, the `u8` value
 /// corresponds to the status byte with channel 0. In case of system messages, the `u8` value

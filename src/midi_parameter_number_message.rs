@@ -5,11 +5,14 @@ use crate::{
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
-/// A MIDI Parameter Number message, either registered (RPN) oder non-registered (NRPN).
+/// A MIDI Parameter Number message, either registered (RPN) or non-registered (NRPN).
 ///
 /// MIDI systems emit those by sending up to 4 single Control Change messages in a row. The
 /// [`MidiParameterNumberMessageScanner`] can be used to extract such messages from a stream of
 /// [`MidiMessage`]s.
+///
+/// [`MidiMessage`]: trait.MidiMessage.html
+/// [`MidiParameterNumberMessageScanner`]: struct.MidiParameterNumberMessageScanner.html
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct MidiParameterNumberMessage {
