@@ -10,7 +10,8 @@ use crate::{
 /// also support their creation. Only one method needs to be implemented, the rest is done by
 /// default methods.
 pub trait MidiMessageFactory: MidiMessage + Sized {
-    /// Creates a MIDI message from the given bytes without checking the given status byte.
+    /// Creates a MIDI message from the given bytes without checking the status byte. The tuple
+    /// consists of the status byte, data byte 1 and data byte 2 in exactly this order.
     ///
     /// # Safety
     ///
@@ -21,9 +22,10 @@ pub trait MidiMessageFactory: MidiMessage + Sized {
     /// usually called by [`from_bytes`], which checks the necessary preconditions.
     ///
     /// [`from_bytes`]: #method.from_bytes
-    unsafe fn from_bytes_unchecked(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Self;
+    unsafe fn from_bytes_unchecked(bytes: (u8, U7, U7)) -> Self;
 
-    /// Creates a MIDI message from the given bytes.
+    /// Creates a MIDI message from the given bytes. The tuple consists of the status byte, data
+    /// byte 1 and data byte 2 in exactly this order.
     ///
     /// # Errors
     ///
@@ -39,13 +41,9 @@ pub trait MidiMessageFactory: MidiMessage + Sized {
     /// recover from wrong input.
     ///
     /// [`test_util`]: test_util/index.html
-    fn from_bytes(
-        status_byte: u8,
-        data_byte_1: U7,
-        data_byte_2: U7,
-    ) -> Result<Self, InvalidStatusByteError> {
-        extract_type_from_status_byte(status_byte)?;
-        Ok(unsafe { Self::from_bytes_unchecked(status_byte, data_byte_1, data_byte_2) })
+    fn from_bytes(bytes: (u8, U7, U7)) -> Result<Self, InvalidStatusByteError> {
+        extract_type_from_status_byte(bytes.0)?;
+        Ok(unsafe { Self::from_bytes_unchecked(bytes) })
     }
 
     /// Creates this message from a MIDI message of another type.
@@ -61,7 +59,7 @@ pub trait MidiMessageFactory: MidiMessage + Sized {
     fn channel_message(r#type: MidiMessageType, channel: Channel, data_1: U7, data_2: U7) -> Self {
         assert_eq!(r#type.super_type(), BlurryMidiMessageSuperType::Channel);
         unsafe {
-            Self::from_bytes_unchecked(build_status_byte(r#type.into(), channel), data_1, data_2)
+            Self::from_bytes_unchecked((build_status_byte(r#type.into(), channel), data_1, data_2))
         }
     }
 
@@ -75,7 +73,7 @@ pub trait MidiMessageFactory: MidiMessage + Sized {
             r#type.super_type(),
             BlurryMidiMessageSuperType::SystemCommon
         );
-        unsafe { Self::from_bytes_unchecked(r#type.into(), data_1, data_2) }
+        unsafe { Self::from_bytes_unchecked((r#type.into(), data_1, data_2)) }
     }
 
     /// Creates a System Real Time message.
@@ -88,28 +86,28 @@ pub trait MidiMessageFactory: MidiMessage + Sized {
             r#type.super_type(),
             BlurryMidiMessageSuperType::SystemRealTime
         );
-        unsafe { Self::from_bytes_unchecked(r#type.into(), U7::MIN, U7::MIN) }
+        unsafe { Self::from_bytes_unchecked((r#type.into(), U7::MIN, U7::MIN)) }
     }
 
     /// Creates a Note On message.
     fn note_on(channel: Channel, key_number: KeyNumber, velocity: U7) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 build_status_byte(MidiMessageType::NoteOn.into(), channel),
                 key_number.into(),
                 velocity,
-            )
+            ))
         }
     }
 
     /// Creates a Note Off message.
     fn note_off(channel: Channel, key_number: KeyNumber, velocity: U7) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 build_status_byte(MidiMessageType::NoteOff.into(), channel),
                 key_number.into(),
                 velocity,
-            )
+            ))
         }
     }
 
@@ -120,22 +118,22 @@ pub trait MidiMessageFactory: MidiMessage + Sized {
         control_value: U7,
     ) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 build_status_byte(MidiMessageType::ControlChange.into(), channel),
                 controller_number.into(),
                 control_value,
-            )
+            ))
         }
     }
 
     /// Creates a Program Change message.
     fn program_change(channel: Channel, program_number: U7) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 build_status_byte(MidiMessageType::ProgramChange.into(), channel),
                 program_number,
                 U7::MIN,
-            )
+            ))
         }
     }
 
@@ -146,117 +144,127 @@ pub trait MidiMessageFactory: MidiMessage + Sized {
         pressure_amount: U7,
     ) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 build_status_byte(MidiMessageType::PolyphonicKeyPressure.into(), channel),
                 key_number.into(),
                 pressure_amount,
-            )
+            ))
         }
     }
 
     /// Creates a Channel Pressure message.
     fn channel_pressure(channel: Channel, pressure_amount: U7) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 build_status_byte(MidiMessageType::ChannelPressure.into(), channel),
                 pressure_amount,
                 U7::MIN,
-            )
+            ))
         }
     }
 
     /// Creates a Pitch Bend Change message.
     fn pitch_bend_change(channel: Channel, pitch_bend_value: U14) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 build_status_byte(MidiMessageType::PitchBendChange.into(), channel),
                 U7((pitch_bend_value.get() & 0x7f) as u8),
                 U7((pitch_bend_value.get() >> 7) as u8),
-            )
+            ))
         }
     }
 
     /// Creates the start of a System Exclusive message.
     fn system_exclusive_start() -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 MidiMessageType::SystemExclusiveStart.into(),
                 U7::MIN,
                 U7::MIN,
-            )
+            ))
         }
     }
 
     /// Creates a MIDI Time Code Quarter Frame message.
     fn midi_time_code_quarter_frame(frame: MidiTimeCodeQuarterFrame) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 MidiMessageType::MidiTimeCodeQuarterFrame.into(),
                 frame.into(),
                 U7::MIN,
-            )
+            ))
         }
     }
 
     /// Creates a Song Position Pointer message.
     fn song_position_pointer(position: U14) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(
+            Self::from_bytes_unchecked((
                 MidiMessageType::SongPositionPointer.into(),
                 U7((position.get() & 0x7f) as u8),
                 U7((position.get() >> 7) as u8),
-            )
+            ))
         }
     }
 
     /// Creates a Song Select message.
     fn song_select(song_number: U7) -> Self {
         unsafe {
-            Self::from_bytes_unchecked(MidiMessageType::SongSelect.into(), song_number, U7::MIN)
+            Self::from_bytes_unchecked((MidiMessageType::SongSelect.into(), song_number, U7::MIN))
         }
     }
 
     /// Creates a Tune Request message.
     fn tune_request() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageType::TuneRequest.into(), U7::MIN, U7::MIN) }
+        unsafe {
+            Self::from_bytes_unchecked((MidiMessageType::TuneRequest.into(), U7::MIN, U7::MIN))
+        }
     }
 
     /// Creates the end of a System Exclusive message.
     fn system_exclusive_end() -> Self {
         unsafe {
-            Self::from_bytes_unchecked(MidiMessageType::SystemExclusiveEnd.into(), U7::MIN, U7::MIN)
+            Self::from_bytes_unchecked((
+                MidiMessageType::SystemExclusiveEnd.into(),
+                U7::MIN,
+                U7::MIN,
+            ))
         }
     }
 
     /// Creates a Timing Clock message.
     fn timing_clock() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageType::TimingClock.into(), U7::MIN, U7::MIN) }
+        unsafe {
+            Self::from_bytes_unchecked((MidiMessageType::TimingClock.into(), U7::MIN, U7::MIN))
+        }
     }
 
     /// Creates a Start message.
     fn start() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageType::Start.into(), U7::MIN, U7::MIN) }
+        unsafe { Self::from_bytes_unchecked((MidiMessageType::Start.into(), U7::MIN, U7::MIN)) }
     }
 
     /// Creates a Continue message.
     fn r#continue() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageType::Continue.into(), U7::MIN, U7::MIN) }
+        unsafe { Self::from_bytes_unchecked((MidiMessageType::Continue.into(), U7::MIN, U7::MIN)) }
     }
 
     /// Creates a Stop message.
     fn stop() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageType::Stop.into(), U7::MIN, U7::MIN) }
+        unsafe { Self::from_bytes_unchecked((MidiMessageType::Stop.into(), U7::MIN, U7::MIN)) }
     }
 
     /// Creates an Active Sensing message.
     fn active_sensing() -> Self {
         unsafe {
-            Self::from_bytes_unchecked(MidiMessageType::ActiveSensing.into(), U7::MIN, U7::MIN)
+            Self::from_bytes_unchecked((MidiMessageType::ActiveSensing.into(), U7::MIN, U7::MIN))
         }
     }
 
     /// Creates a System Reset message.
     fn system_reset() -> Self {
-        unsafe { Self::from_bytes_unchecked(MidiMessageType::SystemReset.into(), U7::MIN, U7::MIN) }
+        unsafe {
+            Self::from_bytes_unchecked((MidiMessageType::SystemReset.into(), U7::MIN, U7::MIN))
+        }
     }
 }

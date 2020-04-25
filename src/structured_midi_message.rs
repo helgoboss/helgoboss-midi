@@ -74,7 +74,7 @@ pub enum StructuredMidiMessage {
 }
 
 impl MidiMessageFactory for StructuredMidiMessage {
-    unsafe fn from_bytes_unchecked(status_byte: u8, data_byte_1: U7, data_byte_2: U7) -> Self {
+    unsafe fn from_bytes_unchecked((status_byte, data_byte_1, data_byte_2): (u8, U7, U7)) -> Self {
         use MidiMessageType::*;
         let r#type = extract_type_from_status_byte(status_byte).unwrap();
         match r#type {

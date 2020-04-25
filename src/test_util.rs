@@ -41,6 +41,10 @@ pub fn controller_number(value: u8) -> ControllerNumber {
     value.try_into().unwrap()
 }
 
+pub fn message(status_byte: u8, data_byte_1: u8, data_byte_2: u8) -> Msg {
+    Msg::from_bytes((status_byte, u7(data_byte_1), u7(data_byte_2))).unwrap()
+}
+
 pub fn note_on(channel: u8, key_number: u8, velocity: u8) -> Msg {
     Msg::note_on(ch(channel), kn(key_number), u7(velocity))
 }

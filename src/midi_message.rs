@@ -59,7 +59,7 @@ pub trait MidiMessage {
     /// Converts this message to a MIDI message of another type.
     fn to_other<O: MidiMessageFactory>(&self) -> O {
         let bytes = self.to_bytes();
-        unsafe { O::from_bytes_unchecked(bytes.0, bytes.1, bytes.2) }
+        unsafe { O::from_bytes_unchecked(bytes) }
     }
 
     /// Converts this message to a [`StructuredMidiMessage`], which is ideal for matching.
@@ -494,7 +494,7 @@ mod tests {
     #[test]
     fn from_bytes_ok() {
         // Given
-        let msg = RawMidiMessage::from_bytes(145, u7(64), u7(100)).unwrap();
+        let msg = RawMidiMessage::from_bytes((145, u7(64), u7(100))).unwrap();
         // When
         // Then
         assert_eq!(msg.status_byte(), 145);
@@ -527,7 +527,7 @@ mod tests {
     #[test]
     fn from_bytes_err() {
         // Given
-        let msg = RawMidiMessage::from_bytes(2, u7(64), u7(100));
+        let msg = RawMidiMessage::from_bytes((2, u7(64), u7(100)));
         // When
         // Then
         assert!(msg.is_err());
@@ -953,7 +953,7 @@ mod tests {
     #[test]
     fn structured() {
         // Given
-        let msg = StructuredMidiMessage::from_bytes(145, u7(64), u7(100)).unwrap();
+        let msg = StructuredMidiMessage::from_bytes((145, u7(64), u7(100))).unwrap();
         // When
         // Then
         let expected_msg = StructuredMidiMessage::NoteOn {
@@ -986,7 +986,7 @@ mod tests {
     #[test]
     fn structured_serialize() {
         // Given
-        let msg = StructuredMidiMessage::from_bytes(145, u7(64), u7(100)).unwrap();
+        let msg = StructuredMidiMessage::from_bytes((145, u7(64), u7(100))).unwrap();
         // When
         let j = serde_json::to_value(&msg).unwrap();
         // Then
@@ -1008,7 +1008,7 @@ mod tests {
     #[test]
     fn raw_serialize() {
         // Given
-        let msg = RawMidiMessage::from_bytes(145, u7(64), u7(100)).unwrap();
+        let msg = RawMidiMessage::from_bytes((145, u7(64), u7(100))).unwrap();
         // When
         let j = serde_json::to_value(&msg).unwrap();
         // Then
