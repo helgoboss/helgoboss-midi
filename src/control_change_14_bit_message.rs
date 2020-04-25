@@ -9,7 +9,7 @@ use serde::{Deserialize, Serialize};
 ///
 /// Unlike a [`ShortMessage`] of type [`ShortMessageType::ControlChange`], this one supports 14-bit
 /// resolution, that means 16384 different values instead of only 128. MIDI systems emit those by
-/// sending 2 single Control Change messages in a row. The [`ControlChange14BitMessageScanner`]
+/// sending 2 short Control Change messages in a row. The [`ControlChange14BitMessageScanner`]
 /// can be used to extract such messages from a stream of [`ShortMessage`]s.
 ///
 /// [`ShortMessage`]: trait.ShortMessage.html

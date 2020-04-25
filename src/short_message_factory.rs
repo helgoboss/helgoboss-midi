@@ -4,9 +4,9 @@ use crate::{
     TimeCodeQuarterFrame, U14, U7,
 };
 
-/// Static methods for creating MIDI messages.
+/// Static methods for creating short MIDI messages.
 ///
-/// This trait is supposed to be implemented for structs that represent a single MIDI message *and*
+/// This trait is supposed to be implemented for structs that represent a short MIDI message *and*
 /// also support their creation. Only one method needs to be implemented, the rest is done by
 /// default methods.
 pub trait ShortMessageFactory: ShortMessage + Sized {

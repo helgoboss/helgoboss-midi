@@ -7,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 /// A MIDI Parameter Number message, either registered (RPN) or non-registered (NRPN).
 ///
-/// MIDI systems emit those by sending up to 4 single Control Change messages in a row. The
+/// MIDI systems emit those by sending up to 4 short Control Change messages in a row. The
 /// [`ParameterNumberMessageScanner`] can be used to extract such messages from a stream of
 /// [`ShortMessage`]s.
 ///
