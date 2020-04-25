@@ -39,6 +39,50 @@ impl_try_from_primitive_to_newtype!(usize, ControllerNumber);
 impl_try_from_primitive_to_newtype!(isize, ControllerNumber);
 
 impl ControllerNumber {
+    /// Returns whether this controller number can be used to make up a 14-bit Control Change
+    /// message.
+    pub fn can_be_part_of_14_bit_control_change_message(&self) -> bool {
+        self.0 < 64
+    }
+
+    /// If this controller number can be used for sending the most significant byte of a 14-bit
+    /// Control Change message, this function returns the corresponding controller number that would
+    /// be used to send the least significant byte of it.
+    pub fn corresponding_14_bit_lsb_controller_number(&self) -> Option<ControllerNumber> {
+        if self.0 >= 32 {
+            return None;
+        }
+        Some(ControllerNumber(self.0 + 32))
+    }
+
+    /// Returns whether this controller number is intended to be used to send part of a (N)RPN
+    /// message.
+    pub fn is_parameter_number_message_controller_number(&self) -> bool {
+        matches!(self.0, 98 | 99 | 100 | 101 | 38 | 6)
+    }
+
+    /// Returns whether this controller number is intended to be used for sending Channel Mode
+    /// messages.
+    pub fn is_channel_mode_message_controller_number(&self) -> bool {
+        *self >= controller_numbers::RESET_ALL_CONTROLLERS
+    }
+}
+
+/// Contains predefined controller numbers.
+///
+/// # Design
+///
+/// Those are not associated constants of `ControllerNumber` because then we could only access them
+/// prefixed with `ControllerNumber::`. Making `ControllerNumber` an enum would have been the
+/// alternative, but this has other downsides such as having to introduce a special variant for
+/// undefined controllers and unnecessary conversion from and to integers. From the MIDI spec
+/// perspective, a controller number seems closer to a plain 7-bit integer than to an enum with
+/// well-defined values. Not all of the controller numbers have a special meaning, and if they do,
+/// this meaning is not necessarily important. In practice, controller numbers are often used for
+/// other things than they were intended for, especially the exotic ones.
+pub mod controller_numbers {
+    use crate::ControllerNumber;
+
     pub const BANK_SELECT: ControllerNumber = ControllerNumber(0x00);
     pub const MODULATION_WHEEL: ControllerNumber = ControllerNumber(0x01);
     pub const BREATH_CONTROLLER: ControllerNumber = ControllerNumber(0x02);
@@ -112,32 +156,4 @@ impl ControllerNumber {
     pub const OMNI_MODE_ON: ControllerNumber = ControllerNumber(0x7D);
     pub const MONO_MODE_ON: ControllerNumber = ControllerNumber(0x7E);
     pub const POLY_MODE_ON: ControllerNumber = ControllerNumber(0x7F);
-
-    /// Returns whether this controller number can be used to make up a 14-bit Control Change
-    /// message.
-    pub fn can_be_part_of_14_bit_control_change_message(&self) -> bool {
-        self.0 < 64
-    }
-
-    /// If this controller number can be used for sending the most significant byte of a 14-bit
-    /// Control Change message, this function returns the corresponding controller number that would
-    /// be used to send the least significant byte of it.
-    pub fn corresponding_14_bit_lsb_controller_number(&self) -> Option<ControllerNumber> {
-        if self.0 >= 32 {
-            return None;
-        }
-        Some(ControllerNumber(self.0 + 32))
-    }
-
-    /// Returns whether this controller number is intended to be used to send part of a (N)RPN
-    /// message.
-    pub fn is_parameter_number_message_controller_number(&self) -> bool {
-        matches!(self.0, 98 | 99 | 100 | 101 | 38 | 6)
-    }
-
-    /// Returns whether this controller number is intended to be used for sending Channel Mode
-    /// messages.
-    pub fn is_channel_mode_message_controller_number(&self) -> bool {
-        *self >= Self::RESET_ALL_CONTROLLERS
-    }
 }

@@ -1,6 +1,6 @@
 use crate::{
     extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
-    ControllerNumber, MidiMessageFactory, U14, U7,
+    MidiMessageFactory, U14, U7,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -123,15 +123,16 @@ impl MidiParameterNumberMessage {
     /// If this message has a 14-bit value, all returned messages are `Some`. If it has a 7-bit
     /// value only, the last one is `None`.
     pub fn to_midi_messages<T: MidiMessageFactory>(&self) -> [Option<T>; 4] {
+        use crate::controller_numbers::*;
         let mut messages = [None, None, None, None];
         let mut i = 0;
         // Number MSB
         messages[i] = Some(T::control_change(
             self.channel,
             if self.is_registered {
-                ControllerNumber::REGISTERED_PARAMETER_NUMBER_MSB
+                REGISTERED_PARAMETER_NUMBER_MSB
             } else {
-                ControllerNumber::NON_REGISTERED_PARAMETER_NUMBER_MSB
+                NON_REGISTERED_PARAMETER_NUMBER_MSB
             },
             extract_high_7_bit_value_from_14_bit_value(self.number),
         ));
@@ -140,9 +141,9 @@ impl MidiParameterNumberMessage {
         messages[i] = Some(T::control_change(
             self.channel,
             if self.is_registered {
-                ControllerNumber::REGISTERED_PARAMETER_NUMBER_LSB
+                REGISTERED_PARAMETER_NUMBER_LSB
             } else {
-                ControllerNumber::NON_REGISTERED_PARAMETER_NUMBER_LSB
+                NON_REGISTERED_PARAMETER_NUMBER_LSB
             },
             extract_low_7_bit_value_from_14_bit_value(self.number),
         ));
@@ -151,7 +152,7 @@ impl MidiParameterNumberMessage {
         if self.is_14_bit {
             messages[i] = Some(T::control_change(
                 self.channel,
-                ControllerNumber::DATA_ENTRY_MSB_LSB,
+                DATA_ENTRY_MSB_LSB,
                 extract_low_7_bit_value_from_14_bit_value(self.value),
             ));
             i += 1;
@@ -159,7 +160,7 @@ impl MidiParameterNumberMessage {
         // Value MSB
         messages[i] = Some(T::control_change(
             self.channel,
-            ControllerNumber::DATA_ENTRY_MSB,
+            DATA_ENTRY_MSB,
             if self.is_14_bit {
                 extract_high_7_bit_value_from_14_bit_value(self.value)
             } else {
