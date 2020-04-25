@@ -5,6 +5,8 @@ use serde::{Deserialize, Serialize};
 use std::convert::TryFrom;
 
 /// A single MIDI message implemented as a tuple of bytes.
+///
+/// The struct's size in memory is currently 3 bytes.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Into)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RawMidiMessage((u8, U7, U7));

@@ -8,10 +8,13 @@ use crate::{
 use serde::{Deserialize, Serialize};
 
 /// A single MIDI message implemented as an enum where each variant contains exactly the data which
-/// is relevant for the particular message type. This enum is primarily intended for read-only usage
-/// via pattern matching. For that reason each variant is a struct-like enum, which is ideal for
-/// pattern matching while it is less ideal for reuse (the data contained in the variant can't
-/// be passed around in one piece).
+/// is relevant for the particular message type.
+///
+/// This enum is primarily intended for read-only usage via pattern matching. For that reason each
+/// variant is a struct-like enum, which is ideal for pattern matching while it is less ideal for
+/// reuse (the data contained in the variant can't be passed around in one piece).
+///
+/// The enum's size in memory is currently 4 bytes.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum StructuredMidiMessage {

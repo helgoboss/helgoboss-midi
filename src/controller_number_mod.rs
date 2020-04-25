@@ -72,7 +72,7 @@ impl ControllerNumber {
 ///
 /// # Design
 ///
-/// Those are not associated constants of `ControllerNumber` because then we could only access them
+/// These are not associated constants of `ControllerNumber` because then we could only access them
 /// prefixed with `ControllerNumber::`. Making `ControllerNumber` an enum would have been the
 /// alternative, but this has other downsides such as having to introduce a special variant for
 /// undefined controllers and unnecessary conversion from and to integers. From the MIDI spec

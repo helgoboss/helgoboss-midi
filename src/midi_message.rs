@@ -14,15 +14,40 @@ use std::convert::{TryFrom, TryInto};
 ///
 /// This trait is supposed to be implemented for structs that represent a single MIDI message. Only
 /// the three byte-returning methods need to be implemented, the rest is done by default methods.
+/// Optimizations can be applied by overwriting the default methods.
 ///
 /// Please also implement the trait [`MidiMessageFactory`] for your struct if creating new MIDI
 /// messages should be supported.
 ///
 /// # Design
 ///
-/// The advantage of using a trait is that a unified API can be used to work with MIDI messages - no
-/// matter the underlying data structure. This crate comes with the "no-fuzz" implementation
-/// [`RawMidiMessage`] and the match-friendly implementation [`StructuredMidiMessage`].
+/// ## Why a trait and not just a data structure?
+///
+/// The advantage of using a trait is that a unified API can be used to work with MIDI messages
+/// regardless of the underlying data structure. This crate comes with two implementations: the
+/// "no-fuzz" byte-based data structure [`RawMidiMessage`] and the match-friendly data structure
+/// [`StructuredMidiMessage`]. Each of them has its own subtle strengths, yet both are really just
+/// MIDI messages and should have the same capabilities. This fact is reflected by having a common
+/// trait.
+///
+/// If there wouldn't be a trait, we would probably keep the [`StructuredMidiMessage`]
+/// implementation and ditch [`RawMidiMessage`]. But this would come at a small cost. In real-world
+/// applications, MIDI messages are constructed from raw bytes. When creating a
+/// [`StructuredMidiMessage`] from raw bytes, a small amount of conversion is required - even if the
+/// consumer doesn't need the matching capabilities at all. With [`RawMidiMessage`], it's just a
+/// matter of copying the bytes. The conversion can happen at a later point when we have to inspect
+/// the message. However, keeping only [`RawMidiMessage`] is also not a good idea because then we
+/// lose the matching capabilities.
+///
+/// Another benefit is flexibility. We might have an existing struct (e.g. an FFI struct) which
+/// already represents a 3-byte MIDI message. Okay, in this case we could just eagerly copy those 3
+/// bytes to a [`RawMidiMessage`], that's cheap. But what if that existing struct represents more
+/// than a 3-byte MIDI message, e.g. it also supports System Exclusive messages or carries MIDI
+/// event information such as a frame? Then simply copying it a dozen times can decrease
+/// performance. So we might want to pass it around as a reference instead. Then we can just
+/// implement the trait for it and it will look and behave like a MIDI message.
+///
+/// ## Why doesn't this trait support System Exclusive messages?
 ///
 /// This trait is not designed to represent messages that are longer than 3 bytes, such as complete
 /// System Exclusive messages. One implication is that implementations of this trait can easily get
@@ -31,8 +56,15 @@ use std::convert::{TryFrom, TryInto};
 /// implementations can be made copyable just by deriving `Copy`, which is essential for passing
 /// around messages by copying rather then dealing with references.
 ///
-/// This trait is also not used to represent MIDI messages made up by multiple single messages, such
-/// as (N)RPN messages. Those are implemented in separate structs.
+/// Also, for the majority of use cases, System Exclusive messages are not necessary. Support for
+/// System Exclusive messages can be built as a separate data structure on top of this
+/// trait and will probably added to `helgoboss-midi` in future.
+///
+/// ## Why doesn't this trait support 14-bit Control Change or (N)RPN messages?
+///
+/// This trait is not used to represent MIDI messages made up by multiple single messages,
+/// such as (N)RPN messages. Those are implemented in separate structs in order to follow the
+/// single-responsibility principle.
 ///
 /// [`MidiMessageFactory`]: trait.MidiMessageFactory.html
 /// [`RawMidiMessage`]: struct.RawMidiMessage.html
@@ -497,6 +529,7 @@ mod tests {
         let msg = RawMidiMessage::from_bytes((145, u7(64), u7(100))).unwrap();
         // When
         // Then
+        assert_eq!(std::mem::size_of::<RawMidiMessage>(), 3);
         assert_eq!(msg.status_byte(), 145);
         assert_eq!(msg.data_byte_1(), u7(64));
         assert_eq!(msg.data_byte_2(), u7(100));
@@ -962,6 +995,7 @@ mod tests {
             velocity: u7(100),
         };
         assert_eq!(msg, expected_msg);
+        assert_eq!(std::mem::size_of::<StructuredMidiMessage>(), 4);
         assert_eq!(msg.status_byte(), 145);
         assert_eq!(msg.data_byte_1(), u7(64));
         assert_eq!(msg.data_byte_2(), u7(100));
