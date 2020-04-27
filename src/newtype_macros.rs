@@ -4,7 +4,7 @@ use derive_more::{Display, Error};
 /// smaller value range.
 #[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
 #[display(fmt = "value out of range")]
-pub struct ValueOutOfRangeError;
+pub struct ValueOutOfRange;
 
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
 macro_rules! newtype {
@@ -106,11 +106,11 @@ macro_rules! impl_from_primitive_to_newtype {
 macro_rules! impl_try_from_newtype_to_newtype {
     ($from: ty, $into: ty) => {
         impl std::convert::TryFrom<$from> for $into {
-            type Error = $crate::ValueOutOfRangeError;
+            type Error = $crate::ValueOutOfRange;
 
             fn try_from(value: $from) -> Result<Self, Self::Error> {
                 if !Self::is_valid(value.0) {
-                    return Err($crate::ValueOutOfRangeError);
+                    return Err($crate::ValueOutOfRange);
                 }
                 Ok(Self(value.0 as _))
             }
@@ -123,11 +123,11 @@ macro_rules! impl_try_from_newtype_to_newtype {
 macro_rules! impl_try_from_primitive_to_newtype {
     ($from: ty, $into: ty) => {
         impl std::convert::TryFrom<$from> for $into {
-            type Error = $crate::ValueOutOfRangeError;
+            type Error = $crate::ValueOutOfRange;
 
             fn try_from(value: $from) -> Result<Self, Self::Error> {
                 if !Self::is_valid(value) {
-                    return Err($crate::ValueOutOfRangeError);
+                    return Err($crate::ValueOutOfRange);
                 }
                 Ok(Self(value as _))
             }

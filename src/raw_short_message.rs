@@ -1,4 +1,4 @@
-use crate::{InvalidStatusByteError, ShortMessage, ShortMessageFactory, U7};
+use crate::{InvalidStatusByte, ShortMessage, ShortMessageFactory, U7};
 use derive_more::*;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -18,7 +18,7 @@ impl ShortMessageFactory for RawShortMessage {
 }
 
 impl TryFrom<(u8, U7, U7)> for RawShortMessage {
-    type Error = InvalidStatusByteError;
+    type Error = InvalidStatusByte;
 
     fn try_from(value: (u8, U7, U7)) -> Result<Self, Self::Error> {
         RawShortMessage::from_bytes(value)

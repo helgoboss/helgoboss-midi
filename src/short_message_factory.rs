@@ -1,6 +1,6 @@
 use crate::{
     build_status_byte, extract_type_from_status_byte, Channel, ControllerNumber,
-    FuzzyMessageSuperType, InvalidStatusByteError, KeyNumber, ShortMessage, ShortMessageType,
+    FuzzyMessageSuperType, InvalidStatusByte, KeyNumber, ShortMessage, ShortMessageType,
     TimeCodeQuarterFrame, U14, U7,
 };
 
@@ -41,7 +41,7 @@ pub trait ShortMessageFactory: ShortMessage + Sized {
     /// recover from wrong input.
     ///
     /// [`test_util`]: test_util/index.html
-    fn from_bytes(bytes: (u8, U7, U7)) -> Result<Self, InvalidStatusByteError> {
+    fn from_bytes(bytes: (u8, U7, U7)) -> Result<Self, InvalidStatusByte> {
         extract_type_from_status_byte(bytes.0)?;
         Ok(unsafe { Self::from_bytes_unchecked(bytes) })
     }
