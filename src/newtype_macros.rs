@@ -60,7 +60,7 @@ This function panics if `value` is greater than ", $max, "."
             }
 
             /// Returns the value as a primitive type.
-            pub fn get(self) -> $repr {
+            pub const fn get(self) -> $repr {
                 self.0
             }
         }
