@@ -481,12 +481,12 @@ pub enum TimeCodeType {
 ///
 /// [`ShortMessage`]: trait.ShortMessage.html
 #[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
-#[display(fmt = "invalid status byte")]
-pub struct InvalidStatusByte;
+#[display(fmt = "status byte invalid")]
+pub struct StatusByteInvalid;
 
 pub(crate) fn extract_type_from_status_byte(
     status_byte: u8,
-) -> Result<ShortMessageType, InvalidStatusByte> {
+) -> Result<ShortMessageType, StatusByteInvalid> {
     let high_status_byte_nibble = extract_high_nibble_from_byte(status_byte);
     let relevant_part = if high_status_byte_nibble == 0xf {
         // System message. The complete status byte makes up the type.
@@ -496,7 +496,7 @@ pub(crate) fn extract_type_from_status_byte(
         // (low nibble encodes channel).
         build_byte_from_nibbles(high_status_byte_nibble, 0)
     };
-    ShortMessageType::try_from(relevant_part).map_err(|_| InvalidStatusByte)
+    ShortMessageType::try_from(relevant_part).map_err(|_| StatusByteInvalid)
 }
 
 fn extract_low_nibble_from_byte(value: u8) -> U4 {
