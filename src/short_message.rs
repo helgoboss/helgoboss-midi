@@ -480,6 +480,7 @@ pub enum TimeCodeType {
 /// An error which can occur when trying to create a [`ShortMessage`] from raw bytes.
 ///
 /// [`ShortMessage`]: trait.ShortMessage.html
+// TODO-medium Don't expose this private error
 #[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
 #[display(fmt = "status byte invalid")]
 pub struct StatusByteInvalid;

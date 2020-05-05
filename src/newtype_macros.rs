@@ -1,5 +1,7 @@
 use derive_more::{Display, Error};
 
+// TODO-medium Expose less error details, prevent creation outside of crate, find better name
+//  maybe like similar error in std
 /// An error which can occur when converting an integer type to another integer type with a smaller
 /// value range.
 #[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
