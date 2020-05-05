@@ -1,7 +1,7 @@
 use derive_more::{Display, Error};
 
-/// An error which can be returned when converting an integer type to another integer type with a
-/// smaller value range.
+/// An error which can occur when converting an integer type to another integer type with a smaller
+/// value range.
 #[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
 #[display(fmt = "value out of range")]
 pub struct ValueOutOfRange;

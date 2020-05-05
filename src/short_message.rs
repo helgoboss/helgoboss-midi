@@ -477,7 +477,7 @@ pub enum TimeCodeType {
     Fps30NonDrop = 3,
 }
 
-/// An error which can be returned when trying to create a [`ShortMessage`] from raw bytes.
+/// An error which can occur when trying to create a [`ShortMessage`] from raw bytes.
 ///
 /// [`ShortMessage`]: trait.ShortMessage.html
 #[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
