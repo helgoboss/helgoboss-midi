@@ -15,4 +15,4 @@ Add this to your `Cargo.toml`:
 helgoboss-midi = "0.1.0"
 ```
 
-See the [documentation](https://docs.rs/helgoboss-midi) for usage examples.
+See the [documentation](https://docs.rs/helgoboss-midi#examples) for usage examples.

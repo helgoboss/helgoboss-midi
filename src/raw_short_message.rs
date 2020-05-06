@@ -12,7 +12,8 @@ use std::convert::TryFrom;
 ///
 /// ```
 /// use helgoboss_midi::{
-///     Channel, KeyNumber, RawShortMessage, ShortMessage, ShortMessageFactory, U7,
+///     Channel, KeyNumber, MessageMainCategory, MessageSuperType, RawShortMessage, ShortMessage,
+///     ShortMessageFactory, ShortMessageType, U7,
 /// };
 ///
 /// let msg = RawShortMessage::note_on(Channel::new(5), KeyNumber::new(64), U7::new(123));
@@ -20,6 +21,9 @@ use std::convert::TryFrom;
 /// assert_eq!(msg.status_byte(), 149);
 /// assert_eq!(msg.data_byte_1().get(), 64);
 /// assert_eq!(msg.data_byte_2().get(), 123);
+/// assert_eq!(msg.r#type(), ShortMessageType::NoteOn);
+/// assert_eq!(msg.super_type(), MessageSuperType::ChannelVoice);
+/// assert_eq!(msg.main_category(), MessageMainCategory::Channel);
 /// assert_eq!(msg.channel(), Some(Channel::new(5)));
 /// assert_eq!(msg.key_number(), Some(KeyNumber::new(64)));
 /// assert_eq!(msg.velocity(), Some(U7::new(123)));

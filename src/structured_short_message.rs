@@ -29,7 +29,8 @@ use serde::{Deserialize, Serialize};
 ///     controller_numbers::DAMPER_PEDAL_ON_OFF,
 ///     U7::new(100),
 /// );
-/// match msg.to_structured() {
+/// let structured_msg = msg.to_structured();
+/// match structured_msg {
 ///     StructuredShortMessage::ControlChange {
 ///         channel,
 ///         controller_number,
@@ -41,6 +42,8 @@ use serde::{Deserialize, Serialize};
 ///     }
 ///     _ => panic!("wrong type"),
 /// };
+/// assert_eq!(structured_msg.channel(), Some(Channel::new(5)));
+/// assert_eq!(std::mem::size_of_val(&structured_msg), 4);
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

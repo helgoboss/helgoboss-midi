@@ -3,6 +3,23 @@
 //! Interfaces, data structures and utilities for dealing with MIDI messages according to the
 //! [MIDI 1.0 specification](https://www.midi.org/specifications-old/category/midi-1-0-detailed-specifications).
 //!
+//! # Features
+//!
+//! - Complete support for the following message types:
+//!     - Short messages (3 bytes)
+//!     - 14-bit Control Change messages
+//!     - (N)RPN messages
+//! - Scanners for extracting 14-bit Control Change and (N)RPN messages from a stream of short
+//!   messages
+//! - Suitable for real-time usage (no heap allocation, no dynamic dispatch, no locking)
+//! - Unified API to work with different short message data structures (see
+//!   [`ShortMessage`](trait.ShortMessage.html) trait)
+//!
+//! # Not yet implemented
+//!
+//! - Data structures and utilities for dealing with System Exclusive messages (intended to be
+//!   introduced later on top of the existing data structures)
+//!
 //! # Examples
 //!
 //! See how to ...
