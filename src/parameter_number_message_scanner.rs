@@ -4,6 +4,32 @@ use crate::{
 };
 
 /// Scanner for detecting (N)RPN messages in a stream of short messages.
+///
+/// # Example
+///
+/// ```
+/// use helgoboss_midi::test_util::control_change;
+/// use helgoboss_midi::{
+///     Channel, ControllerNumber, ParameterNumberMessage, ParameterNumberMessageScanner, U14,
+/// };
+///
+/// let mut scanner = ParameterNumberMessageScanner::new();
+/// let result_1 = scanner.feed(&control_change(0, 101, 3));
+/// let result_2 = scanner.feed(&control_change(0, 100, 36));
+/// let result_3 = scanner.feed(&control_change(0, 38, 24));
+/// let result_4 = scanner.feed(&control_change(0, 6, 117));
+/// assert_eq!(result_1, None);
+/// assert_eq!(result_2, None);
+/// assert_eq!(result_3, None);
+/// assert_eq!(
+///     result_4,
+///     Some(ParameterNumberMessage::registered_14_bit(
+///         Channel::new(0),
+///         U14::new(420),
+///         U14::new(15000)
+///     ))
+/// );
+/// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
 pub struct ParameterNumberMessageScanner {
     scanner_by_channel: [ScannerForOneChannel; 16],

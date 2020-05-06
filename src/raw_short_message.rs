@@ -7,6 +7,25 @@ use std::convert::TryFrom;
 /// A short message implemented as a tuple of bytes.
 ///
 /// The struct's size in memory is currently 3 bytes.
+///
+/// # Example
+///
+/// ```
+/// use helgoboss_midi::{
+///     Channel, KeyNumber, RawShortMessage, ShortMessage, ShortMessageFactory, U7,
+/// };
+///
+/// let msg = RawShortMessage::note_on(Channel::new(5), KeyNumber::new(64), U7::new(123));
+/// assert_eq!(std::mem::size_of_val(&msg), 3);
+/// assert_eq!(msg.status_byte(), 149);
+/// assert_eq!(msg.data_byte_1().get(), 64);
+/// assert_eq!(msg.data_byte_2().get(), 123);
+/// assert_eq!(msg.channel(), Some(Channel::new(5)));
+/// assert_eq!(msg.key_number(), Some(KeyNumber::new(64)));
+/// assert_eq!(msg.velocity(), Some(U7::new(123)));
+/// assert_eq!(msg.controller_number(), None);
+/// assert_eq!(msg.control_value(), None);
+/// ```
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Into)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RawShortMessage((u8, U7, U7));

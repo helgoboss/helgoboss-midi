@@ -15,6 +15,33 @@ use serde::{Deserialize, Serialize};
 /// reuse (the data contained in the variant can't be passed around in one piece).
 ///
 /// The enum's size in memory is currently 4 bytes.
+///
+/// # Example
+///
+/// ```
+/// use helgoboss_midi::{
+///     controller_numbers, Channel, RawShortMessage, ShortMessage, ShortMessageFactory,
+///     StructuredShortMessage, U7,
+/// };
+///
+/// let msg = RawShortMessage::control_change(
+///     Channel::new(5),
+///     controller_numbers::DAMPER_PEDAL_ON_OFF,
+///     U7::new(100),
+/// );
+/// match msg.to_structured() {
+///     StructuredShortMessage::ControlChange {
+///         channel,
+///         controller_number,
+///         control_value,
+///     } => {
+///         assert_eq!(channel.get(), 5);
+///         assert_eq!(controller_number.get(), 64);
+///         assert_eq!(control_value.get(), 100);
+///     }
+///     _ => panic!("wrong type"),
+/// };
+/// ```
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum StructuredShortMessage {
@@ -79,7 +106,7 @@ pub enum StructuredShortMessage {
 impl ShortMessageFactory for StructuredShortMessage {
     unsafe fn from_bytes_unchecked((status_byte, data_byte_1, data_byte_2): (u8, U7, U7)) -> Self {
         use ShortMessageType::*;
-        let r#type = extract_type_from_status_byte(status_byte).unwrap();
+        let r#type = extract_type_from_status_byte(status_byte).expect("invalid status byte");
         match r#type {
             NoteOff => StructuredShortMessage::NoteOff {
                 channel: extract_channel_from_status_byte(status_byte),

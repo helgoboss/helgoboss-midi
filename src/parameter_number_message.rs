@@ -11,6 +11,33 @@ use serde::{Deserialize, Serialize};
 /// [`ParameterNumberMessageScanner`] can be used to extract such messages from a stream of
 /// [`ShortMessage`]s.
 ///
+/// # Example
+///
+/// ```
+/// use helgoboss_midi::{
+///     controller_numbers, Channel, ParameterNumberMessage, RawShortMessage, U14,
+/// };
+///
+/// let msg =
+///     ParameterNumberMessage::registered_14_bit(Channel::new(0), U14::new(420), U14::new(15000));
+/// assert_eq!(msg.channel().get(), 0);
+/// assert_eq!(msg.number().get(), 420);
+/// assert_eq!(msg.value().get(), 15000);
+/// assert!(msg.is_registered());
+/// assert!(msg.is_14_bit());
+/// let short_messages: [Option<RawShortMessage>; 4] = msg.to_short_messages();
+/// use helgoboss_midi::test_util::control_change;
+/// assert_eq!(
+///     short_messages,
+///     [
+///         Some(control_change(0, 101, 3)),
+///         Some(control_change(0, 100, 36)),
+///         Some(control_change(0, 38, 24)),
+///         Some(control_change(0, 6, 117)),
+///     ]
+/// );
+/// ```
+///
 /// [`ShortMessage`]: trait.ShortMessage.html
 /// [`ParameterNumberMessageScanner`]: struct.ParameterNumberMessageScanner.html
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]

@@ -57,7 +57,7 @@ use std::convert::{TryFrom, TryInto};
 ///
 /// For the majority of use cases, System Exclusive messages are not necessary. Support for them can
 /// be built as a separate data structure on top of this trait and will probably added to
-/// `helgoboss-midi` in future.
+/// *helgoboss-midi* in future.
 ///
 /// ## Why doesn't this trait support 14-bit Control Change or (N)RPN messages?
 ///
@@ -99,7 +99,7 @@ pub trait ShortMessage {
 
     /// Returns the type of this message.
     fn r#type(&self) -> ShortMessageType {
-        extract_type_from_status_byte(self.status_byte()).unwrap()
+        extract_type_from_status_byte(self.status_byte()).expect("invalid status byte detected")
     }
 
     /// Returns the super type of this message.
@@ -456,7 +456,9 @@ impl From<U7> for TimeCodeQuarterFrame {
             6 => HoursCountLsNibble(extract_low_nibble_from_byte(data)),
             7 => Last {
                 hours_count_ms_bit: (data & 0b0000001) != 0,
-                time_code_type: ((data & 0b0000110) >> 1).try_into().unwrap(),
+                time_code_type: ((data & 0b0000110) >> 1)
+                    .try_into()
+                    .expect("unknown time code type"),
             },
             _ => unreachable!(),
         }

@@ -4,6 +4,28 @@ use crate::{
 };
 
 /// Scanner for detecting 14-bit Control Change messages in a stream of short MIDI messages.
+///
+/// # Example
+///
+/// ```
+/// use helgoboss_midi::test_util::control_change;
+/// use helgoboss_midi::{
+///     Channel, ControlChange14BitMessage, ControlChange14BitMessageScanner, ControllerNumber, U14,
+/// };
+///
+/// let mut scanner = ControlChange14BitMessageScanner::new();
+/// let result_1 = scanner.feed(&control_change(5, 2, 8));
+/// let result_2 = scanner.feed(&control_change(5, 34, 33));
+/// assert_eq!(result_1, None);
+/// assert_eq!(
+///     result_2,
+///     Some(ControlChange14BitMessage::new(
+///         Channel::new(5),
+///         ControllerNumber::new(2),
+///         U14::new(1057)
+///     ))
+/// );
+/// ```
 #[derive(Copy, Clone, Eq, PartialEq, Debug, Default)]
 pub struct ControlChange14BitMessageScanner {
     scanner_by_channel: [ScannerForOneChannel; 16],
@@ -79,7 +101,7 @@ impl ScannerForOneChannel {
         if lsb_controller_number
             != msb_controller_number
                 .corresponding_14_bit_lsb_controller_number()
-                .unwrap()
+                .expect("impossible")
         {
             return None;
         }

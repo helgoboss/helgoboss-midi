@@ -12,6 +12,33 @@ use serde::{Deserialize, Serialize};
 /// sending 2 short Control Change messages in a row. The [`ControlChange14BitMessageScanner`]
 /// can be used to extract such messages from a stream of [`ShortMessage`]s.
 ///
+/// # Example
+///
+/// ```
+/// use helgoboss_midi::{
+///     controller_numbers, Channel, ControlChange14BitMessage, RawShortMessage, U14,
+/// };
+///
+/// let msg = ControlChange14BitMessage::new(
+///     Channel::new(5),
+///     controller_numbers::CHANNEL_VOLUME,
+///     U14::new(1057),
+/// );
+/// assert_eq!(msg.channel().get(), 5);
+/// assert_eq!(msg.msb_controller_number().get(), 7);
+/// assert_eq!(
+///     msg.lsb_controller_number(),
+///     controller_numbers::CHANNEL_VOLUME_LSB
+/// );
+/// use helgoboss_midi::test_util::control_change;
+/// assert_eq!(msg.value().get(), 1057);
+/// let short_messages: [RawShortMessage; 2] = msg.to_short_messages();
+/// assert_eq!(
+///     short_messages,
+///     [control_change(5, 7, 8), control_change(5, 39, 33)]
+/// );
+/// ```
+///
 /// [`ShortMessage`]: trait.ShortMessage.html
 /// [`ShortMessageType::ControlChange`]: enum.ShortMessageType.html#variant.ControlChange
 /// [`ControlChange14BitMessageScanner`]: struct.ControlChange14BitMessageScanner.html
@@ -61,7 +88,7 @@ impl ControlChange14BitMessage {
     pub fn lsb_controller_number(&self) -> ControllerNumber {
         self.msb_controller_number
             .corresponding_14_bit_lsb_controller_number()
-            .unwrap()
+            .expect("impossible")
     }
 
     /// Returns the 14-bit value of this message.

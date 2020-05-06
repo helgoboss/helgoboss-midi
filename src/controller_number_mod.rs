@@ -78,7 +78,7 @@ impl ControllerNumber {
 /// undefined controllers and unnecessary conversion from and to integers. From the MIDI spec
 /// perspective, a controller number seems closer to a plain 7-bit integer than to an enum with
 /// well-defined values. Not all of the controller numbers have a special meaning, and if they do,
-/// this meaning is not necessarily important. In practice, controller numbers are often for
+/// this meaning is not necessarily important. In practice, controller numbers are often used for
 /// other things than they were intended for, especially the exotic ones.
 ///
 /// [`ControllerNumber`]: struct.ControllerNumber.html

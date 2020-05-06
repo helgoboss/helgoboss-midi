@@ -1,11 +1,21 @@
 #![doc(html_root_url = "https://docs.rs/helgoboss-midi/0.1.0")]
-//! Interfaces, data structures and utilities for dealing with MIDI messages according to the MIDI
-//! 1.0 specification.
-//!
-//! The core type is [`ShortMessage`].
-//!
-//! [`ShortMessage`]: trait.ShortMessage.html
 
+//! Interfaces, data structures and utilities for dealing with MIDI messages according to the
+//! [MIDI 1.0 specification](https://www.midi.org/specifications-old/category/midi-1-0-detailed-specifications).
+//!
+//! # Examples
+//!
+//! See how to ...
+//!
+//! - [Create and inspect short messages](struct.RawShortMessage.html#example)
+//! - [Easily match short messages](enum.StructuredShortMessage.html#example)
+//! - [Create and inspect 14-bit Control Change
+//!   messages](struct.ControlChange14BitMessage.html#example)
+//! - [Create and inspect (N)RPN messages](struct.ParameterNumberMessage.html#example)
+//! - [Create MIDI messages with minimum boilerplate](test_util/index.html#example)
+//! - [Scan stream for 14-bit Control Change
+//!   messages](struct.ControlChange14BitMessageScanner.html#example)
+//! - [Scan stream for (N)RPN messages](struct.ParameterNumberMessageScanner.html#example)
 #[macro_use]
 mod newtype_macros;
 pub use newtype_macros::*;
