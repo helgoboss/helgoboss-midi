@@ -1,8 +1,18 @@
 use crate::{
     build_status_byte, extract_type_from_status_byte, Channel, ControllerNumber,
-    FuzzyMessageSuperType, KeyNumber, ShortMessage, ShortMessageType, StatusByteInvalid,
-    TimeCodeQuarterFrame, U14, U7,
+    FuzzyMessageSuperType, KeyNumber, ShortMessage, ShortMessageType, TimeCodeQuarterFrame, U14,
+    U7,
 };
+use derive_more::Display;
+
+/// An error which can occur when trying to create a [`ShortMessage`] from raw bytes.
+///
+/// [`ShortMessage`]: trait.ShortMessage.html
+#[derive(Debug, Clone, Eq, PartialEq, Display)]
+#[display(fmt = "invalid MIDI message bytes")]
+pub struct FromBytesError(pub(crate) ());
+
+impl std::error::Error for FromBytesError {}
 
 /// Static methods for creating short MIDI messages.
 ///
@@ -41,8 +51,8 @@ pub trait ShortMessageFactory: ShortMessage + Sized {
     /// recover from wrong input.
     ///
     /// [`test_util`]: test_util/index.html
-    fn from_bytes(bytes: (u8, U7, U7)) -> Result<Self, StatusByteInvalid> {
-        extract_type_from_status_byte(bytes.0)?;
+    fn from_bytes(bytes: (u8, U7, U7)) -> Result<Self, FromBytesError> {
+        extract_type_from_status_byte(bytes.0).map_err(|_| FromBytesError(()))?;
         Ok(unsafe { Self::from_bytes_unchecked(bytes) })
     }
 

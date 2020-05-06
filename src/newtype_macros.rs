@@ -1,12 +1,12 @@
-use derive_more::{Display, Error};
+use derive_more::Display;
 
-// TODO-medium Expose less error details, prevent creation outside of crate, find better name
-//  maybe like similar error in std
-/// An error which can occur when converting an integer type to another integer type with a smaller
-/// value range.
-#[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
-#[display(fmt = "value out of range")]
-pub struct ValueOutOfRange;
+/// An error which can occur when converting from a type with a greater value range to one with a
+/// smaller one.
+#[derive(Debug, Clone, Eq, PartialEq, Display)]
+#[display(fmt = "converting to type with smaller value range failed")]
+pub struct TryFromGreaterError(pub(crate) ());
+
+impl std::error::Error for TryFromGreaterError {}
 
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
 macro_rules! newtype {
@@ -108,11 +108,11 @@ macro_rules! impl_from_primitive_to_newtype {
 macro_rules! impl_try_from_newtype_to_newtype {
     ($from: ty, $into: ty) => {
         impl std::convert::TryFrom<$from> for $into {
-            type Error = $crate::ValueOutOfRange;
+            type Error = $crate::TryFromGreaterError;
 
             fn try_from(value: $from) -> Result<Self, Self::Error> {
                 if !Self::is_valid(value.0) {
-                    return Err($crate::ValueOutOfRange);
+                    return Err($crate::TryFromGreaterError(()));
                 }
                 Ok(Self(value.0 as _))
             }
@@ -125,11 +125,11 @@ macro_rules! impl_try_from_newtype_to_newtype {
 macro_rules! impl_try_from_primitive_to_newtype {
     ($from: ty, $into: ty) => {
         impl std::convert::TryFrom<$from> for $into {
-            type Error = $crate::ValueOutOfRange;
+            type Error = $crate::TryFromGreaterError;
 
             fn try_from(value: $from) -> Result<Self, Self::Error> {
                 if !Self::is_valid(value) {
-                    return Err($crate::ValueOutOfRange);
+                    return Err($crate::TryFromGreaterError(()));
                 }
                 Ok(Self(value as _))
             }

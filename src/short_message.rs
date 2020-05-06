@@ -2,7 +2,6 @@ use crate::{
     build_14_bit_value_from_two_7_bit_values, extract_channel_from_status_byte, Channel,
     ControllerNumber, KeyNumber, ShortMessageFactory, StructuredShortMessage, U14, U4, U7,
 };
-use derive_more::{Display, Error};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -477,17 +476,12 @@ pub enum TimeCodeType {
     Fps30NonDrop = 3,
 }
 
-/// An error which can occur when trying to create a [`ShortMessage`] from raw bytes.
-///
-/// [`ShortMessage`]: trait.ShortMessage.html
-// TODO-medium Don't expose this private error
-#[derive(Debug, Clone, Eq, PartialEq, Display, Error)]
-#[display(fmt = "status byte invalid")]
-pub struct StatusByteInvalid;
+#[derive(Debug)]
+pub(crate) struct InvalidStatusByteError;
 
 pub(crate) fn extract_type_from_status_byte(
     status_byte: u8,
-) -> Result<ShortMessageType, StatusByteInvalid> {
+) -> Result<ShortMessageType, InvalidStatusByteError> {
     let high_status_byte_nibble = extract_high_nibble_from_byte(status_byte);
     let relevant_part = if high_status_byte_nibble == 0xf {
         // System message. The complete status byte makes up the type.
@@ -497,7 +491,7 @@ pub(crate) fn extract_type_from_status_byte(
         // (low nibble encodes channel).
         build_byte_from_nibbles(high_status_byte_nibble, 0)
     };
-    ShortMessageType::try_from(relevant_part).map_err(|_| StatusByteInvalid)
+    ShortMessageType::try_from(relevant_part).map_err(|_| InvalidStatusByteError)
 }
 
 fn extract_low_nibble_from_byte(value: u8) -> U4 {
