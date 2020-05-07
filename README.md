@@ -10,6 +10,7 @@ Interfaces, data structures and utilities for dealing with MIDI messages in Rust
 ## Usage
 
 Add this to your `Cargo.toml`:
+
 ```toml
 [dependencies]
 helgoboss-midi = "0.1.0"

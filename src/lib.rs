@@ -17,8 +17,9 @@
 //!
 //! # Not yet implemented
 //!
-//! - Data structures and utilities for dealing with System Exclusive messages (intended to be
-//!   introduced later on top of the existing data structures)
+//! Data structures and utilities for dealing with System Exclusive messages are not yet
+//! implemented. They will be added eventually as separate structures on top of the
+//! existing ones (similar to (N)RPN and 14-bit Control Change).
 //!
 //! # Examples
 //!
