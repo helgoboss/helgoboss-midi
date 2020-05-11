@@ -1,7 +1,6 @@
 #![doc(html_root_url = "https://docs.rs/helgoboss-midi/0.1.0")]
 
-//! Interfaces, data structures and utilities for dealing with MIDI messages according to the
-//! [MIDI 1.0 specification](https://www.midi.org/specifications-old/category/midi-1-0-detailed-specifications).
+//! Interfaces, data structures and utilities for dealing with MIDI messages.
 //!
 //! # Features
 //!
@@ -14,6 +13,7 @@
 //! - Suitable for real-time usage (no heap allocation, no dynamic dispatch, no locking)
 //! - Unified API to work with different short message data structures (see
 //!   [`ShortMessage`](trait.ShortMessage.html) trait)
+//! - Uses wording which is as close as possible to the [MIDI 1.0 specification](https://www.midi.org/specifications-old/category/midi-1-0-detailed-specifications)
 //!
 //! # Not yet implemented
 //!
