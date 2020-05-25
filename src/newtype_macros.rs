@@ -1,8 +1,6 @@
-use derive_more::Display;
-
 /// An error which can occur when converting from a type with a greater value range to one with a
 /// smaller one.
-#[derive(Debug, Clone, Eq, PartialEq, Display)]
+#[derive(Clone, Eq, PartialEq, Debug, derive_more::Display)]
 #[display(fmt = "converting to type with smaller value range failed")]
 pub struct TryFromGreaterError(pub(crate) ());
 
@@ -18,7 +16,7 @@ macro_rules! newtype {
     ) => {
         $(#[$outer])*
         #[derive(
-            Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, derive_more::Display,
+            Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, derive_more::Display, derive_more::FromStr,
         )]
         #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name(pub(crate) $repr);

@@ -8,7 +8,7 @@ use derive_more::Display;
 /// An error which can occur when trying to create a [`ShortMessage`] from raw bytes.
 ///
 /// [`ShortMessage`]: trait.ShortMessage.html
-#[derive(Debug, Clone, Eq, PartialEq, Display)]
+#[derive(Clone, Eq, PartialEq, Debug, Display)]
 #[display(fmt = "invalid MIDI message bytes")]
 pub struct FromBytesError(pub(crate) ());
 
