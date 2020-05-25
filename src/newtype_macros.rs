@@ -6,6 +6,13 @@ pub struct TryFromGreaterError(pub(crate) ());
 
 impl std::error::Error for TryFromGreaterError {}
 
+/// An error which can occur when parsing a string to one of the MIDI integer types.
+#[derive(Clone, Eq, PartialEq, Debug, derive_more::Display)]
+#[display(fmt = "parsing string to MIDI type failed")]
+pub struct ParseIntError(pub(crate) ());
+
+impl std::error::Error for ParseIntError {}
+
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
 macro_rules! newtype {
     (
@@ -16,7 +23,7 @@ macro_rules! newtype {
     ) => {
         $(#[$outer])*
         #[derive(
-            Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, derive_more::Display, derive_more::FromStr,
+            Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, derive_more::Display,
         )]
         #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
         pub struct $name(pub(crate) $repr);
@@ -62,6 +69,18 @@ This function panics if `value` is greater than ", $max, "."
             /// Returns the value as a primitive type.
             pub const fn get(self) -> $repr {
                 self.0
+            }
+        }
+
+        impl std::str::FromStr for $name {
+            type Err = $crate::ParseIntError;
+
+            fn from_str(source: &str) -> Result<Self, Self::Err> {
+                let primitive = <$repr>::from_str(source).map_err(|_| $crate::ParseIntError(()))?;
+                if !$name::is_valid(primitive) {
+                    return Err($crate::ParseIntError(()));
+                }
+                Ok($name(primitive))
             }
         }
     };
