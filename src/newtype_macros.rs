@@ -36,7 +36,7 @@ macro_rules! newtype {
             pub const MAX: $name = $name($max);
 
             fn is_valid<T: PartialOrd + From<$repr>>(number: T) -> bool {
-                number <= $max.into()
+                number >= 0.into() && number <= $max.into()
             }
 
             doc_comment::doc_comment! {
