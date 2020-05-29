@@ -25,7 +25,11 @@ macro_rules! newtype {
         #[derive(
             Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, Default, derive_more::Display,
         )]
-        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+        #[cfg_attr(
+            feature = "serde",
+            derive(serde::Serialize, serde::Deserialize),
+            serde(try_from = "u16")
+        )]
         pub struct $name(pub(crate) $repr);
 
         impl $name {
