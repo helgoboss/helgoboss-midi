@@ -5,7 +5,7 @@ use crate::{
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
-#[cfg(feature = "serde")]
+#[cfg(feature = "serde_repr")]
 use serde_repr::{Deserialize_repr, Serialize_repr};
 use std::convert::{TryFrom, TryInto};
 
@@ -258,7 +258,7 @@ pub trait ShortMessage {
 #[derive(
     Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug, IntoPrimitive, TryFromPrimitive,
 )]
-#[cfg_attr(feature = "serde", derive(Serialize_repr, Deserialize_repr))]
+#[cfg_attr(feature = "serde_repr", derive(Serialize_repr, Deserialize_repr))]
 #[repr(u8)]
 pub enum ShortMessageType {
     // Channel messages = channel voice messages + channel mode messages
