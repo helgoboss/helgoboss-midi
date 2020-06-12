@@ -43,7 +43,8 @@ impl ParameterNumberMessageScanner {
 
     /// Feeds the scanner a single short message.
     ///
-    /// Returns the (N)RPN message if one has been detected.  
+    /// Returns the (N)RPN message if one has been detected.
+    // TODO-medium A short message is really not big, so we should take it by value!
     pub fn feed(&mut self, msg: &impl ShortMessage) -> Option<ParameterNumberMessage> {
         let channel = msg.channel()?;
         self.scanner_by_channel[usize::from(channel)].feed(msg)

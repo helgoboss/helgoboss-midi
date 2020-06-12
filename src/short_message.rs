@@ -396,9 +396,10 @@ pub enum MessageMainCategory {
     System,
 }
 
-/// Possible contents of a MIDI Time Code Quarter Frame message. Each frame is part of the MIDI Time
-/// Code information used for synchronization of MIDI equipment and other equipment, such as audio
-/// or video tape machines.
+/// Possible contents of a MIDI Time Code Quarter Frame message.
+///
+/// Each frame is part of the MIDI Time Code information used for synchronization of MIDI equipment
+/// and other equipment, such as audio or video tape machines.
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub enum TimeCodeQuarterFrame {
