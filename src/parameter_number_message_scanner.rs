@@ -82,7 +82,7 @@ impl ScannerForOneChannel {
                 6 => self.process_value_msb(channel, control_value),
                 _ => None,
             },
-            _ => return None,
+            _ => None,
         }
     }
 

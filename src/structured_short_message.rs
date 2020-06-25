@@ -133,7 +133,7 @@ impl ShortMessageFactory for StructuredShortMessage {
             },
             ProgramChange => StructuredShortMessage::ProgramChange {
                 channel: extract_channel_from_status_byte(status_byte),
-                program_number: data_byte_1.into(),
+                program_number: data_byte_1,
             },
             ChannelPressure => StructuredShortMessage::ChannelPressure {
                 channel: extract_channel_from_status_byte(status_byte),
@@ -223,7 +223,7 @@ impl ShortMessage for StructuredShortMessage {
             ControlChange {
                 controller_number, ..
             } => (*controller_number).into(),
-            ProgramChange { program_number, .. } => (*program_number).into(),
+            ProgramChange { program_number, .. } => *program_number,
             ChannelPressure {
                 pressure_amount, ..
             } => *pressure_amount,
@@ -288,6 +288,6 @@ impl ShortMessage for StructuredShortMessage {
 
     // Slight optimization
     fn to_structured(&self) -> StructuredShortMessage {
-        self.clone()
+        *self
     }
 }

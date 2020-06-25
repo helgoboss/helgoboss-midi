@@ -71,7 +71,7 @@ impl ScannerForOneChannel {
                 (32..=63) => self.process_value_lsb(channel, controller_number, control_value),
                 _ => None,
             },
-            _ => return None,
+            _ => None,
         }
     }
 
