@@ -67,12 +67,13 @@ use std::convert::{TryFrom, TryInto};
 ///
 /// ## Why do methods in this trait take self by reference?
 ///
-/// Methods of this trait take self by reference, not by value. This might seem unnecessary
-/// considering that it takes only 3 bytes to represent a short MIDI message and that they are
-/// usually `Copy`. The reason for still taking a reference is the same like mentioned above:
-/// Existing structs that implement this trait could represent more than just a short MIDI message,
-/// consist of more than 3 bytes and not even be `Copy` - we just don't know when we work with
-/// generics.
+/// Methods of this trait take self by reference, not by value. Other functions in this crate do
+/// the same, as long as they don't take a concrete short MIDI message type. This might seem
+/// unnecessary considering that it takes only 3 bytes to represent a short MIDI message and that
+/// they are usually `Copy`. The reason for still taking a reference is the same like mentioned
+/// above: Existing structs that implement this trait could represent more than just a short MIDI
+/// message, consist of more than 3 bytes and not even be `Copy` - we just don't know when we work
+/// with generics.
 ///
 /// [`ShortMessageFactory`]: trait.ShortMessageFactory.html
 /// [`RawShortMessage`]: struct.RawShortMessage.html
