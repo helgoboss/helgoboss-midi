@@ -62,11 +62,9 @@ impl ControlChange14BitMessage {
         msb_controller_number: ControllerNumber,
         value: U14,
     ) -> ControlChange14BitMessage {
-        assert!(
-            msb_controller_number
-                .corresponding_14_bit_lsb_controller_number()
-                .is_some()
-        );
+        assert!(msb_controller_number
+            .corresponding_14_bit_lsb_controller_number()
+            .is_some());
         ControlChange14BitMessage {
             channel,
             msb_controller_number,

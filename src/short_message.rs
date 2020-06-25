@@ -65,6 +65,15 @@ use std::convert::{TryFrom, TryInto};
 /// (N)RPN messages. Those are implemented in separate structs in order to follow the
 /// single-responsibility principle.
 ///
+/// ## Why do methods in this trait take self by reference?
+///
+/// Methods of this trait take self by reference, not by value. This might seem unnecessary
+/// considering that it takes only 3 bytes to represent a short MIDI message and that they are
+/// usually `Copy`. The reason for still taking a reference is the same like mentioned above:
+/// Existing structs that implement this trait could represent more than just a short MIDI message,
+/// consist of more than 3 bytes and not even be `Copy` - we just don't know when we work with
+/// generics.
+///
 /// [`ShortMessageFactory`]: trait.ShortMessageFactory.html
 /// [`RawShortMessage`]: struct.RawShortMessage.html
 /// [`StructuredShortMessage`]: enum.StructuredShortMessage.html
