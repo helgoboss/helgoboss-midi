@@ -52,7 +52,10 @@ macro_rules! newtype {
 This function panics if `value` is greater than ", $max, "."
                 ),
                 pub fn new(value: $repr) -> $name {
-                    assert!($name::is_valid(value));
+                    assert!(
+                        $name::is_valid(value),
+                        format!("{} is not a valid value", value)
+                    );
                     $name(value)
                 }
             }
