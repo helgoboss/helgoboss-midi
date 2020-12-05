@@ -182,10 +182,10 @@ pub trait ShortMessage {
 
     /// Returns whether this message is a note-on or note-off.
     fn is_note(&self) -> bool {
-        match self.r#type() {
-            ShortMessageType::NoteOn | ShortMessageType::NoteOff => true,
-            _ => false,
-        }
+        matches!(
+            self.r#type(),
+            ShortMessageType::NoteOn | ShortMessageType::NoteOff
+        )
     }
 
     /// Returns the channel of this message if applicable.
