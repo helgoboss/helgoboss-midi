@@ -8,16 +8,17 @@ repository = "https://github.com/helgoboss/helgoboss-midi"
 readme = "README.md"
 keywords = ["midi"]
 edition = "2018"
-categories = ["data-structures", "multimedia"]
+categories = ["data-structures", "multimedia", "embedded", "no-std"]
 
 [dependencies]
-num_enum = "0.5.1"
+num_enum = { version = "0.5.1", default-features = false }
 derive_more = "0.99.11"
 serde = { version = "1.0", optional = true, features = ["derive"] }
 serde_repr = { version = "0.1.6", optional = true }
 doc-comment = "0.3.3"
-core-error = "0.0.0"
+core-error = { version = "0.0.0", default-features = false }
 
 [dev-dependencies]
+# remove? we don't have any examples in any case
 serde_json = "1.0"
 version-sync = "0.9"

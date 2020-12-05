@@ -13,6 +13,8 @@ pub struct ParseIntError(pub(crate) ());
 
 impl core_error::Error for ParseIntError {}
 
+// use core::fmt;
+
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
 macro_rules! newtype {
     (
@@ -54,7 +56,9 @@ This function panics if `value` is greater than ", $max, "."
                 pub fn new(value: $repr) -> $name {
                     assert!(
                         $name::is_valid(value),
-                        format!("{} is not a valid value", value)
+                        // requires std
+                        //format!("{} is not a valid value", value)
+                        "Not a valid value"
                     );
                     $name(value)
                 }
