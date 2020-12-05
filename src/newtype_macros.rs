@@ -54,12 +54,14 @@ macro_rules! newtype {
 This function panics if `value` is greater than ", $max, "."
                 ),
                 pub fn new(value: $repr) -> $name {
-                    assert!(
-                        $name::is_valid(value),
-                        // requires std
-                        //format!("{} is not a valid value", value)
-                        "Not a valid value"
-                    );
+                    #[cfg(feature = "std")]
+                    {
+                        assert!($name::is_valid(value), format!("{} is not a valid value", value));
+                    }
+                    #[cfg(feature = "no_std")]
+                    {
+                        assert!($name::is_valid(value), "Not a valid value");
+                    }
                     $name(value)
                 }
             }
