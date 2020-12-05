@@ -43,7 +43,7 @@ use serde::{Deserialize, Serialize};
 ///     _ => panic!("wrong type"),
 /// };
 /// assert_eq!(structured_msg.channel(), Some(Channel::new(5)));
-/// assert_eq!(std::mem::size_of_val(&structured_msg), 4);
+/// assert_eq!(core::mem::size_of_val(&structured_msg), 4);
 /// ```
 #[derive(Copy, Clone, Eq, PartialEq, Ord, PartialOrd, Hash, Debug)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]

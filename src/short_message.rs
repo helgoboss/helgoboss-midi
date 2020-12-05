@@ -2,12 +2,12 @@ use crate::{
     build_14_bit_value_from_two_7_bit_values, extract_channel_from_status_byte, Channel,
     ControllerNumber, KeyNumber, ShortMessageFactory, StructuredShortMessage, U14, U4, U7,
 };
+use core::convert::{TryFrom, TryInto};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde_repr")]
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use std::convert::{TryFrom, TryInto};
 
 /// A single short MIDI message, where *short* means it's made up by a maximum of 3 bytes.
 ///
@@ -535,7 +535,7 @@ mod tests {
         let msg = RawShortMessage::from_bytes((145, u7(64), u7(100))).unwrap();
         // When
         // Then
-        assert_eq!(std::mem::size_of::<RawShortMessage>(), 3);
+        assert_eq!(core::mem::size_of::<RawShortMessage>(), 3);
         assert_eq!(msg.status_byte(), 145);
         assert_eq!(msg.data_byte_1(), u7(64));
         assert_eq!(msg.data_byte_2(), u7(100));
@@ -1001,7 +1001,7 @@ mod tests {
             velocity: u7(100),
         };
         assert_eq!(msg, expected_msg);
-        assert_eq!(std::mem::size_of::<StructuredShortMessage>(), 4);
+        assert_eq!(core::mem::size_of::<StructuredShortMessage>(), 4);
         assert_eq!(msg.status_byte(), 145);
         assert_eq!(msg.data_byte_1(), u7(64));
         assert_eq!(msg.data_byte_2(), u7(100));
