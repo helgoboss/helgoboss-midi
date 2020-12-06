@@ -13,8 +13,6 @@ pub struct ParseIntError(pub(crate) ());
 
 impl core_error::Error for ParseIntError {}
 
-// use core::fmt;
-
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
 macro_rules! newtype {
     (
