@@ -14,6 +14,11 @@
 
 ### Security
 
+## 0.1.2 - 2020-12-06
+
+### Fixed
+- Fixed version references in `README.md` and `lib.rs`.
+
 ## 0.1.1 - 2020-12-06
 
 ### Added
