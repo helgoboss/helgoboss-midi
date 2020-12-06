@@ -22,3 +22,7 @@ core-error = { version = "0.0.0", default-features = false }
 # remove? we don't have any examples in any case
 serde_json = "1.0"
 version-sync = "0.9"
+
+[features]
+default = ["std"]
+std = []

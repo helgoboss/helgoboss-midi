@@ -17,4 +17,11 @@ Add this to your `Cargo.toml`:
 helgoboss-midi = "0.1.0"
 ```
 
+If you want to use it in a `no_std` context, add this instead:
+
+```toml
+[dependencies]
+helgoboss-midi = { version = "0.1.0", default-features = false }
+```
+
 The [documentation](https://docs.rs/helgoboss-midi) contains a feature list and usage examples.
