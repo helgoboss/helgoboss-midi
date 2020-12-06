@@ -4,14 +4,16 @@
 #[display(fmt = "converting to type with smaller value range failed")]
 pub struct TryFromGreaterError(pub(crate) ());
 
-impl std::error::Error for TryFromGreaterError {}
+impl core_error::Error for TryFromGreaterError {}
 
 /// An error which can occur when parsing a string to one of the MIDI integer types.
 #[derive(Clone, Eq, PartialEq, Debug, derive_more::Display)]
 #[display(fmt = "parsing string to MIDI type failed")]
 pub struct ParseIntError(pub(crate) ());
 
-impl std::error::Error for ParseIntError {}
+impl core_error::Error for ParseIntError {}
+
+// use core::fmt;
 
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
 macro_rules! newtype {
@@ -52,10 +54,14 @@ macro_rules! newtype {
 This function panics if `value` is greater than ", $max, "."
                 ),
                 pub fn new(value: $repr) -> $name {
-                    assert!(
-                        $name::is_valid(value),
-                        format!("{} is not a valid value", value)
-                    );
+                    #[cfg(feature = "std")]
+                    {
+                        assert!($name::is_valid(value), format!("{} is not a valid value", value));
+                    }
+                    #[cfg(feature = "no_std")]
+                    {
+                        assert!($name::is_valid(value), "Not a valid value");
+                    }
                     $name(value)
                 }
             }
@@ -79,7 +85,7 @@ This function panics if `value` is greater than ", $max, "."
             }
         }
 
-        impl std::str::FromStr for $name {
+        impl core::str::FromStr for $name {
             type Err = $crate::ParseIntError;
 
             fn from_str(source: &str) -> Result<Self, Self::Err> {
@@ -131,7 +137,7 @@ macro_rules! impl_from_primitive_to_newtype {
 /// Creates a `TryFrom` trait implementation from a newtype with a higher value range to a newtype.
 macro_rules! impl_try_from_newtype_to_newtype {
     ($from: ty, $into: ty) => {
-        impl std::convert::TryFrom<$from> for $into {
+        impl core::convert::TryFrom<$from> for $into {
             type Error = $crate::TryFromGreaterError;
 
             fn try_from(value: $from) -> Result<Self, Self::Error> {
@@ -148,7 +154,7 @@ macro_rules! impl_try_from_newtype_to_newtype {
 /// newtype.
 macro_rules! impl_try_from_primitive_to_newtype {
     ($from: ty, $into: ty) => {
-        impl std::convert::TryFrom<$from> for $into {
+        impl core::convert::TryFrom<$from> for $into {
             type Error = $crate::TryFromGreaterError;
 
             fn try_from(value: $from) -> Result<Self, Self::Error> {
