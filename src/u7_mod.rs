@@ -39,3 +39,19 @@ impl_try_from_primitive_to_newtype!(u128, U7);
 impl_try_from_primitive_to_newtype!(i128, U7);
 impl_try_from_primitive_to_newtype!(usize, U7);
 impl_try_from_primitive_to_newtype!(isize, U7);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_successful() {
+        U7::new(127);
+    }
+
+    #[test]
+    #[should_panic(expected = "128 is not a valid U7 value")]
+    fn new_failing() {
+        U7::new(128);
+    }
+}
