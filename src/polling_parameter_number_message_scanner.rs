@@ -22,11 +22,8 @@ use std::time::{Duration, Instant};
 /// # Example
 ///
 /// ```
-/// use helgoboss_midi::test_util::control_change;
-/// use helgoboss_midi::{
-///     Channel, ControllerNumber, ParameterNumberMessage, PollingParameterNumberMessageScanner, U7,
-///     U14,
-/// };
+/// use helgoboss_midi::test_util::{control_change, channel, u7, u14};
+/// use helgoboss_midi::{ParameterNumberMessage, PollingParameterNumberMessageScanner};
 /// use std::time::Duration;
 ///
 /// let mut scanner = PollingParameterNumberMessageScanner::new(Duration::from_millis(0));
@@ -34,16 +31,16 @@ use std::time::{Duration, Instant};
 /// let result_1 = scanner.feed(&control_change(2, 99, 3));
 /// let result_2 = scanner.feed(&control_change(2, 98, 37));
 /// let result_3 = scanner.feed(&control_change(2, 6, 126));
-/// let result_4 = scanner.poll(ch(2));
+/// let result_4 = scanner.poll(channel(2));
 /// assert_eq!(result_1, None);
 /// assert_eq!(result_2, None);
 /// assert_eq!(result_3, None);
 /// assert_eq!(
 ///     result_4,
 ///     Some(ParameterNumberMessage::non_registered_7_bit(
-///         Channel::new(2),
-///         U14::new(421),
-///         U7::new(126)
+///         channel(2),
+///         u14(421),
+///         u7(126)
 ///     ))
 /// );
 /// ```

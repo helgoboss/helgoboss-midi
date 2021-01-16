@@ -16,10 +16,8 @@ use crate::{
 /// # Example
 ///
 /// ```
-/// use helgoboss_midi::test_util::control_change;
-/// use helgoboss_midi::{
-///     Channel, ControllerNumber, ParameterNumberMessage, ParameterNumberMessageScanner, U14,
-/// };
+/// use helgoboss_midi::test_util::{control_change, channel, u14};
+/// use helgoboss_midi::{ParameterNumberMessage, ParameterNumberMessageScanner};
 ///
 /// let mut scanner = ParameterNumberMessageScanner::new();
 /// let result_1 = scanner.feed(&control_change(0, 101, 3));
@@ -32,9 +30,9 @@ use crate::{
 /// assert_eq!(
 ///     result_4,
 ///     Some(ParameterNumberMessage::registered_14_bit(
-///         Channel::new(0),
-///         U14::new(420),
-///         U14::new(15000)
+///         channel(0),
+///         u14(420),
+///         u14(15000)
 ///     ))
 /// );
 /// ```
