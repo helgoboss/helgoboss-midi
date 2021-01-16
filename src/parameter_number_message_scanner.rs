@@ -3,7 +3,12 @@ use crate::{
     StructuredShortMessage, U7,
 };
 
-/// Scanner for detecting (N)RPN messages in a stream of short messages.
+/// Scanner for detecting (N)RPN messages in a stream of short messages without polling.
+///
+/// Supports the following value message sequences:
+///
+/// - `[MSB]`: Interpreted as 7-bit message.
+/// - `[LSB, MSB]`: Interpreted as 14-bit message.
 ///
 /// # Example
 ///
@@ -193,12 +198,14 @@ mod tests {
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
         assert_eq!(result_3, None);
-        let result_4 = result_4.unwrap();
-        assert_eq!(result_4.channel(), ch(0));
-        assert_eq!(result_4.number(), u14(420));
-        assert_eq!(result_4.value(), u14(15000));
-        assert!(result_4.is_registered());
-        assert!(result_4.is_14_bit());
+        assert_eq!(
+            result_4,
+            Some(ParameterNumberMessage::registered_14_bit(
+                ch(0),
+                u14(420),
+                u14(15000)
+            ))
+        );
     }
 
     #[test]
@@ -212,12 +219,14 @@ mod tests {
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
-        let result_3 = result_3.unwrap();
-        assert_eq!(result_3.channel(), ch(2));
-        assert_eq!(result_3.number(), u14(421));
-        assert_eq!(result_3.value(), u14(126));
-        assert!(!result_3.is_registered());
-        assert!(!result_3.is_14_bit());
+        assert_eq!(
+            result_3,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
     }
 
     #[test]
@@ -236,20 +245,24 @@ mod tests {
         assert_eq!(result_1, None);
         assert_eq!(result_3, None);
         assert_eq!(result_5, None);
-        let result_7 = result_7.unwrap();
-        assert_eq!(result_7.channel(), ch(0));
-        assert_eq!(result_7.number(), u14(420));
-        assert_eq!(result_7.value(), u14(15000));
-        assert!(result_7.is_registered());
-        assert!(result_7.is_14_bit());
+        assert_eq!(
+            result_7,
+            Some(ParameterNumberMessage::registered_14_bit(
+                ch(0),
+                u14(420),
+                u14(15000)
+            ))
+        );
         assert_eq!(result_2, None);
         assert_eq!(result_4, None);
-        let result_6 = result_6.unwrap();
-        assert_eq!(result_6.channel(), ch(2));
-        assert_eq!(result_6.number(), u14(421));
-        assert_eq!(result_6.value(), u14(126));
-        assert!(!result_6.is_registered());
-        assert!(!result_6.is_14_bit());
+        assert_eq!(
+            result_6,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
     }
 
     #[test]
@@ -266,11 +279,13 @@ mod tests {
         // Then
         assert_eq!(result_1, None);
         assert_eq!(result_2, None);
-        let result_3 = result_3.unwrap();
-        assert_eq!(result_3.channel(), ch(2));
-        assert_eq!(result_3.number(), u14(421));
-        assert_eq!(result_3.value(), u14(126));
-        assert!(!result_3.is_registered());
-        assert!(!result_3.is_14_bit());
+        assert_eq!(
+            result_3,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
     }
 }
