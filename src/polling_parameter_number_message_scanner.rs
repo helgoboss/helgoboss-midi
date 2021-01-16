@@ -134,6 +134,19 @@ impl NumberState {
     fn number(&self) -> U14 {
         build_14_bit_value_from_two_7_bit_values(self.msb, self.lsb)
     }
+
+    fn process_value_byte_when_waiting_for_value(&self, byte: U7, is_msb: bool) -> Res {
+        // This is the first arriving value byte. Wait for next one.
+        Res {
+            next_state: State::ValuePending(ValuePendingState {
+                number_state: *self,
+                arrival_time: Instant::now(),
+                first_value_byte: byte,
+                is_msb,
+            }),
+            result: None,
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -142,6 +155,51 @@ struct ValuePendingState {
     arrival_time: Instant,
     first_value_byte: U7,
     is_msb: bool,
+}
+
+impl ValuePendingState {
+    fn resolve(&self, channel: Channel) -> Option<ParameterNumberMessage> {
+        if self.is_msb {
+            // [x, y, MSB]
+            // We were waiting for a remaining LSB but none arrived. 7-bit!
+            Some(ParameterNumberMessage::seven_bit(
+                channel,
+                self.number_state.number(),
+                self.first_value_byte,
+                self.number_state.is_registered,
+            ))
+        } else {
+            // [x, y, LSB]
+            // We were waiting for a remaining MSB but none arrived. Invalid.
+            None
+        }
+    }
+
+    fn process_expected_value_byte_when_pending(&self, channel: Channel, byte: U7) -> Res {
+        let value_msb = if self.is_msb {
+            self.first_value_byte
+        } else {
+            byte
+        };
+        let value_lsb = if self.is_msb {
+            byte
+        } else {
+            self.first_value_byte
+        };
+        Res {
+            next_state: State::FourteenBitValueComplete(FourteenBitValueCompleteState {
+                number_state: self.number_state,
+                value_msb,
+                value_lsb,
+            }),
+            result: Some(ParameterNumberMessage::fourteen_bit(
+                channel,
+                self.number_state.number(),
+                build_14_bit_value_from_two_7_bit_values(value_msb, value_lsb),
+                self.number_state.is_registered,
+            )),
+        }
+    }
 }
 
 #[derive(Copy, Clone, Eq, PartialEq, Debug)]
@@ -188,7 +246,7 @@ impl ScannerForOneChannel {
             }
             Res {
                 next_state: State::WaitingForFirstValueByte(state.number_state),
-                result: resolve_pending(state, channel),
+                result: state.resolve(channel),
             }
         };
         self.state = res.next_state;
@@ -287,7 +345,7 @@ impl ScannerForOneChannel {
                         msb: if is_msb { byte } else { state.number_state.msb },
                         is_registered,
                     }),
-                    result: resolve_pending(state, channel),
+                    result: state.resolve(channel),
                 }
             }
         };
@@ -307,12 +365,12 @@ impl ScannerForOneChannel {
                 return None;
             }
             WaitingForFirstValueByte(state) => {
-                process_value_byte_when_waiting_for_value(state, value_lsb, false)
+                state.process_value_byte_when_waiting_for_value(value_lsb, false)
             }
             ValuePending(state) => {
                 if state.is_msb {
                     // We were waiting exactly for this byte. The value is complete!
-                    process_expected_value_byte_when_pending(state, channel, value_lsb)
+                    state.process_expected_value_byte_when_pending(channel, value_lsb)
                 } else {
                     // We were waiting for the MSB but another LSB arrived. This is invalid. Start
                     // waiting for value again.
@@ -354,7 +412,7 @@ impl ScannerForOneChannel {
                 return None;
             }
             WaitingForFirstValueByte(state) => {
-                process_value_byte_when_waiting_for_value(state, value_msb, true)
+                state.process_value_byte_when_waiting_for_value(value_msb, true)
             }
             ValuePending(state) => {
                 if state.is_msb {
@@ -377,7 +435,7 @@ impl ScannerForOneChannel {
                     }
                 } else {
                     // We were waiting exactly for this byte. The value is complete!
-                    process_expected_value_byte_when_pending(state, channel, value_msb)
+                    state.process_expected_value_byte_when_pending(channel, value_msb)
                 }
             }
             FourteenBitValueComplete(state) => {
@@ -396,66 +454,6 @@ impl ScannerForOneChannel {
         };
         self.state = res.next_state;
         res.result
-    }
-}
-
-fn resolve_pending(state: &ValuePendingState, channel: Channel) -> Option<ParameterNumberMessage> {
-    if state.is_msb {
-        // [x, y, MSB]
-        // We were waiting for a remaining LSB but none arrived. 7-bit!
-        Some(ParameterNumberMessage::seven_bit(
-            channel,
-            state.number_state.number(),
-            state.first_value_byte,
-            state.number_state.is_registered,
-        ))
-    } else {
-        // [x, y, LSB]
-        // We were waiting for a remaining MSB but none arrived. Invalid.
-        None
-    }
-}
-
-fn process_value_byte_when_waiting_for_value(state: &NumberState, byte: U7, is_msb: bool) -> Res {
-    // This is the first arriving value byte. Wait for next one.
-    Res {
-        next_state: State::ValuePending(ValuePendingState {
-            number_state: *state,
-            arrival_time: Instant::now(),
-            first_value_byte: byte,
-            is_msb,
-        }),
-        result: None,
-    }
-}
-
-fn process_expected_value_byte_when_pending(
-    state: &ValuePendingState,
-    channel: Channel,
-    byte: U7,
-) -> Res {
-    let value_msb = if state.is_msb {
-        state.first_value_byte
-    } else {
-        byte
-    };
-    let value_lsb = if state.is_msb {
-        byte
-    } else {
-        state.first_value_byte
-    };
-    Res {
-        next_state: State::FourteenBitValueComplete(FourteenBitValueCompleteState {
-            number_state: state.number_state,
-            value_msb,
-            value_lsb,
-        }),
-        result: Some(ParameterNumberMessage::fourteen_bit(
-            channel,
-            state.number_state.number(),
-            build_14_bit_value_from_two_7_bit_values(value_msb, value_lsb),
-            state.number_state.is_registered,
-        )),
     }
 }
 
