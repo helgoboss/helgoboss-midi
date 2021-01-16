@@ -2,7 +2,8 @@ use crate::{
     build_14_bit_value_from_two_7_bit_values, Channel, ParameterNumberMessage, ShortMessage,
     StructuredShortMessage, U14, U7,
 };
-use std::time::{Duration, Instant};
+use core::time::Duration;
+use std::time::Instant;
 
 /// Scanner for detecting (N)RPN messages in a stream of short messages with polling.
 ///

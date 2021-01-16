@@ -63,7 +63,9 @@ pub use parameter_number_message::*;
 mod parameter_number_message_scanner;
 pub use parameter_number_message_scanner::*;
 
+#[cfg(feature = "std")]
 mod polling_parameter_number_message_scanner;
+#[cfg(feature = "std")]
 pub use polling_parameter_number_message_scanner::*;
 
 // I added the _mod suffix because of intellij-rust issue 4992
