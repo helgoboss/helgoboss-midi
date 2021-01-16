@@ -253,6 +253,40 @@ mod tests {
     }
 
     #[test]
+    fn x_y_msb_x_y_msb() {
+        // Given
+        let mut scanner = ParameterNumberMessageScanner::new();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(126)));
+        let result_4 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_5 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_6 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(125)));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(
+            result_3,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
+        assert_eq!(result_4, None);
+        assert_eq!(result_5, None);
+        assert_eq!(
+            result_6,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(125)
+            ))
+        );
+    }
+
+    #[test]
     fn x_y_lsb_msb_lsb_msb() {
         // Given
         let mut scanner = ParameterNumberMessageScanner::new();
@@ -278,6 +312,44 @@ mod tests {
         assert_eq!(result_5, None);
         assert_eq!(
             result_6,
+            Some(ParameterNumberMessage::registered_14_bit(
+                ch(0),
+                u14(420),
+                u14(14999)
+            ))
+        );
+    }
+
+    #[test]
+    fn x_y_lsb_msb_x_y_lsb_msb() {
+        // Given
+        let mut scanner = ParameterNumberMessageScanner::new();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(101), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(100), u7(36)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(38), u7(24)));
+        let result_4 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
+        let result_5 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(101), u7(3)));
+        let result_6 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(100), u7(36)));
+        let result_7 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(38), u7(23)));
+        let result_8 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(result_3, None);
+        assert_eq!(
+            result_4,
+            Some(ParameterNumberMessage::registered_14_bit(
+                ch(0),
+                u14(420),
+                u14(15000)
+            ))
+        );
+        assert_eq!(result_5, None);
+        assert_eq!(result_6, None);
+        assert_eq!(result_7, None);
+        assert_eq!(
+            result_8,
             Some(ParameterNumberMessage::registered_14_bit(
                 ch(0),
                 u14(420),

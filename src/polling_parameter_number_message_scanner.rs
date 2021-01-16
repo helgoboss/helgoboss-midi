@@ -164,10 +164,10 @@ impl ScannerForOneChannel {
                 controller_number,
                 control_value,
             } => match controller_number.get() {
-                98 => self.process_number_lsb(control_value, false),
-                99 => self.process_number_msb(control_value, false),
-                100 => self.process_number_lsb(control_value, true),
-                101 => self.process_number_msb(control_value, true),
+                98 => self.process_number_lsb(control_value, false, channel),
+                99 => self.process_number_msb(control_value, false, channel),
+                100 => self.process_number_lsb(control_value, true, channel),
+                101 => self.process_number_msb(control_value, true, channel),
                 38 => self.process_value_lsb(channel, control_value),
                 6 => self.process_value_msb(channel, control_value),
                 _ => None,
@@ -186,17 +186,14 @@ impl ScannerForOneChannel {
             if state.arrival_time.elapsed() < self.timeout {
                 return None;
             }
+            let result = resolve_pending(state, channel);
             if state.is_msb {
                 // [x, y, MSB]
                 // We were waiting for a remaining LSB but none arrived. 7-bit!
                 Res {
+                    // TODO This is wrong because it can't accept value updates anymore! Write a test.
                     next_state: Default::default(),
-                    result: Some(ParameterNumberMessage::seven_bit(
-                        channel,
-                        state.number_state.number(),
-                        state.first_value_byte,
-                        state.number_state.is_registered,
-                    )),
+                    result,
                 }
             } else {
                 // [x, y, LSB]
@@ -204,7 +201,7 @@ impl ScannerForOneChannel {
                 // for value again.
                 Res {
                     next_state: State::WaitingForFirstValueByte(state.number_state),
-                    result: None,
+                    result,
                 }
             }
         };
@@ -220,16 +217,18 @@ impl ScannerForOneChannel {
         &mut self,
         number_msb: U7,
         is_registered: bool,
+        channel: Channel,
     ) -> Option<ParameterNumberMessage> {
-        self.process_number_byte(number_msb, is_registered, true)
+        self.process_number_byte(number_msb, is_registered, true, channel)
     }
 
     fn process_number_lsb(
         &mut self,
         number_lsb: U7,
         is_registered: bool,
+        channel: Channel,
     ) -> Option<ParameterNumberMessage> {
-        self.process_number_byte(number_lsb, is_registered, false)
+        self.process_number_byte(number_lsb, is_registered, false, channel)
     }
 
     fn process_number_byte(
@@ -237,55 +236,77 @@ impl ScannerForOneChannel {
         byte: U7,
         is_registered: bool,
         is_msb: bool,
+        channel: Channel,
     ) -> Option<ParameterNumberMessage> {
         use State::*;
-        let next_state = match &self.state {
+        let res = match &self.state {
             WaitingForNumberCompletion(state) => {
                 if let Some(state_byte) = state.first_number_byte {
                     // We received one byte already.
                     if state.is_msb == is_msb {
                         // Overwrite already existing byte.
-                        WaitingForNumberCompletion(WaitingForNumberCompletionState {
-                            first_number_byte: Some(byte),
-                            is_registered,
-                            is_msb,
-                        })
+                        Res {
+                            next_state: WaitingForNumberCompletion(
+                                WaitingForNumberCompletionState {
+                                    first_number_byte: Some(byte),
+                                    is_registered,
+                                    is_msb,
+                                },
+                            ),
+                            result: None,
+                        }
                     } else {
                         // Number complete.
-                        WaitingForFirstValueByte(NumberState {
-                            msb: if state.is_msb { state_byte } else { byte },
-                            lsb: if state.is_msb { byte } else { state_byte },
-                            is_registered,
-                        })
+                        Res {
+                            next_state: WaitingForFirstValueByte(NumberState {
+                                msb: if state.is_msb { state_byte } else { byte },
+                                lsb: if state.is_msb { byte } else { state_byte },
+                                is_registered,
+                            }),
+                            result: None,
+                        }
                     }
                 } else {
                     // This is the first byte.
-                    WaitingForNumberCompletion(WaitingForNumberCompletionState {
-                        first_number_byte: Some(byte),
-                        is_registered,
-                        is_msb,
-                    })
+                    Res {
+                        next_state: WaitingForNumberCompletion(WaitingForNumberCompletionState {
+                            first_number_byte: Some(byte),
+                            is_registered,
+                            is_msb,
+                        }),
+                        result: None,
+                    }
                 }
             }
             WaitingForFirstValueByte(state)
-            | ValuePending(ValuePendingState {
-                number_state: state,
-                ..
-            })
             | FourteenBitValueComplete(FourteenBitValueCompleteState {
                 number_state: state,
                 ..
             }) => {
-                // Change number and reset value.
-                WaitingForFirstValueByte(NumberState {
-                    lsb: if is_msb { state.lsb } else { byte },
-                    msb: if is_msb { byte } else { state.lsb },
-                    is_registered,
-                })
+                // No pending value, everything already delivered. Change number and reset value.
+                Res {
+                    next_state: WaitingForFirstValueByte(NumberState {
+                        lsb: if is_msb { state.lsb } else { byte },
+                        msb: if is_msb { byte } else { state.msb },
+                        is_registered,
+                    }),
+                    result: None,
+                }
+            }
+            ValuePending(state) => {
+                // Pending value. Deliver, change number, reset value.
+                Res {
+                    next_state: WaitingForFirstValueByte(NumberState {
+                        lsb: if is_msb { state.number_state.lsb } else { byte },
+                        msb: if is_msb { byte } else { state.number_state.msb },
+                        is_registered,
+                    }),
+                    result: resolve_pending(state, channel),
+                }
             }
         };
-        self.state = next_state;
-        None
+        self.state = res.next_state;
+        res.result
     }
 
     fn process_value_lsb(
@@ -389,6 +410,23 @@ impl ScannerForOneChannel {
         };
         self.state = res.next_state;
         res.result
+    }
+}
+
+fn resolve_pending(state: &ValuePendingState, channel: Channel) -> Option<ParameterNumberMessage> {
+    if state.is_msb {
+        // [x, y, MSB]
+        // We were waiting for a remaining LSB but none arrived. 7-bit!
+        Some(ParameterNumberMessage::seven_bit(
+            channel,
+            state.number_state.number(),
+            state.first_value_byte,
+            state.number_state.is_registered,
+        ))
+    } else {
+        // [x, y, LSB]
+        // We were waiting for a remaining MSB but none arrived. Invalid.
+        None
     }
 }
 
@@ -579,6 +617,42 @@ mod tests {
     }
 
     #[test]
+    fn x_y_msb_x_y_msb() {
+        // Given
+        let mut scanner = PollingParameterNumberMessageScanner::default();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(126)));
+        let result_4 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_5 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_6 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(125)));
+        let result_7 = scanner.poll(ch(2));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(result_3, None);
+        assert_eq!(
+            result_4,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
+        assert_eq!(result_5, None);
+        assert_eq!(result_6, None);
+        assert_eq!(
+            result_7,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(125)
+            ))
+        );
+    }
+
+    #[test]
     fn x_y_msb_lsb_msb_lsb() {
         // Given
         let mut scanner = PollingParameterNumberMessageScanner::default();
@@ -604,6 +678,44 @@ mod tests {
         assert_eq!(result_5, None);
         assert_eq!(
             result_6,
+            Some(ParameterNumberMessage::registered_14_bit(
+                ch(0),
+                u14(420),
+                u14(14999)
+            ))
+        );
+    }
+
+    #[test]
+    fn x_y_msb_lsb_x_y_msb_lsb() {
+        // Given
+        let mut scanner = PollingParameterNumberMessageScanner::default();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(101), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(100), u7(36)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
+        let result_4 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(38), u7(24)));
+        let result_5 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(101), u7(3)));
+        let result_6 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(100), u7(36)));
+        let result_7 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
+        let result_8 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(38), u7(23)));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(result_3, None);
+        assert_eq!(
+            result_4,
+            Some(ParameterNumberMessage::registered_14_bit(
+                ch(0),
+                u14(420),
+                u14(15000)
+            ))
+        );
+        assert_eq!(result_5, None);
+        assert_eq!(result_6, None);
+        assert_eq!(result_7, None);
+        assert_eq!(
+            result_8,
             Some(ParameterNumberMessage::registered_14_bit(
                 ch(0),
                 u14(420),
@@ -640,6 +752,44 @@ mod tests {
                 ch(0),
                 u14(420),
                 u14(15001)
+            ))
+        );
+    }
+
+    #[test]
+    fn x_y_lsb_msb_x_y_lsb_msb() {
+        // Given
+        let mut scanner = PollingParameterNumberMessageScanner::default();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(101), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(100), u7(36)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(38), u7(24)));
+        let result_4 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
+        let result_5 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(101), u7(3)));
+        let result_6 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(100), u7(36)));
+        let result_7 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(38), u7(23)));
+        let result_8 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(result_3, None);
+        assert_eq!(
+            result_4,
+            Some(ParameterNumberMessage::registered_14_bit(
+                ch(0),
+                u14(420),
+                u14(15000)
+            ))
+        );
+        assert_eq!(result_5, None);
+        assert_eq!(result_6, None);
+        assert_eq!(result_7, None);
+        assert_eq!(
+            result_8,
+            Some(ParameterNumberMessage::registered_14_bit(
+                ch(0),
+                u14(420),
+                u14(14999)
             ))
         );
     }
