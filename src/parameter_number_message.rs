@@ -79,7 +79,7 @@ impl ParameterNumberMessage {
         Self::fourteen_bit(channel, number, value, true)
     }
 
-    fn seven_bit(
+    pub(crate) fn seven_bit(
         channel: Channel,
         number: U14,
         value: U7,
@@ -94,7 +94,7 @@ impl ParameterNumberMessage {
         }
     }
 
-    fn fourteen_bit(
+    pub(crate) fn fourteen_bit(
         channel: Channel,
         number: U14,
         value: U14,

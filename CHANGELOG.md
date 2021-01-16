@@ -4,6 +4,8 @@
 
 ### Added
 
+- Added `PollingParameterNumberMessageScanner` for detecting of many more (N)RPN short message sequences.
+
 ### Changed
 
 ### Deprecated

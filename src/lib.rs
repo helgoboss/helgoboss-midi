@@ -63,6 +63,9 @@ pub use parameter_number_message::*;
 mod parameter_number_message_scanner;
 pub use parameter_number_message_scanner::*;
 
+mod polling_parameter_number_message_scanner;
+pub use polling_parameter_number_message_scanner::*;
+
 // I added the _mod suffix because of intellij-rust issue 4992
 mod channel_mod;
 pub use channel_mod::*;
