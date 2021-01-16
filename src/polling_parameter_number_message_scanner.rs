@@ -186,23 +186,9 @@ impl ScannerForOneChannel {
             if state.arrival_time.elapsed() < self.timeout {
                 return None;
             }
-            let result = resolve_pending(state, channel);
-            if state.is_msb {
-                // [x, y, MSB]
-                // We were waiting for a remaining LSB but none arrived. 7-bit!
-                Res {
-                    // TODO This is wrong because it can't accept value updates anymore! Write a test.
-                    next_state: Default::default(),
-                    result,
-                }
-            } else {
-                // [x, y, LSB]
-                // We were waiting for a remaining MSB but none arrived. Invalid. Start waiting
-                // for value again.
-                Res {
-                    next_state: State::WaitingForFirstValueByte(state.number_state),
-                    result,
-                }
+            Res {
+                next_state: State::WaitingForFirstValueByte(state.number_state),
+                result: resolve_pending(state, channel),
             }
         };
         self.state = res.next_state;
@@ -608,6 +594,40 @@ mod tests {
         );
         assert_eq!(
             result_5,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(127)
+            ))
+        );
+    }
+
+    #[test]
+    fn x_y_msb_poll_msb() {
+        // Given
+        let mut scanner = PollingParameterNumberMessageScanner::default();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(126)));
+        let result_4 = scanner.poll(ch(2));
+        let result_5 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(127)));
+        let result_6 = scanner.poll(ch(2));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(result_3, None);
+        assert_eq!(
+            result_4,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
+        assert_eq!(result_5, None);
+        assert_eq!(
+            result_6,
             Some(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
