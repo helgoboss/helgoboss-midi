@@ -16,6 +16,7 @@ use serde::{Deserialize, Serialize};
 /// ```
 /// use helgoboss_midi::{
 ///     controller_numbers, Channel, ParameterNumberMessage, RawShortMessage, U14,
+///     DataEntryByteOrder::MsbFirst
 /// };
 ///
 /// let msg =
@@ -25,15 +26,15 @@ use serde::{Deserialize, Serialize};
 /// assert_eq!(msg.value().get(), 15000);
 /// assert!(msg.is_registered());
 /// assert!(msg.is_14_bit());
-/// let short_messages: [Option<RawShortMessage>; 4] = msg.to_short_messages();
+/// let short_messages: [Option<RawShortMessage>; 4] = msg.to_short_messages(MsbFirst);
 /// use helgoboss_midi::test_util::control_change;
 /// assert_eq!(
 ///     short_messages,
 ///     [
 ///         Some(control_change(0, 101, 3)),
 ///         Some(control_change(0, 100, 36)),
-///         Some(control_change(0, 38, 24)),
 ///         Some(control_change(0, 6, 117)),
+///         Some(control_change(0, 38, 24)),
 ///     ]
 /// );
 /// ```
@@ -139,9 +140,13 @@ impl ParameterNumberMessage {
     /// Translates this message into up to 4 short Control Change messages, which need to be sent in
     /// a row in order to encode this (N)RPN message.
     ///
-    /// If this message has a 14-bit value, all returned messages are `Some`. If it has a 7-bit
-    /// value only, the last one is `None`.
-    pub fn to_short_messages<T: ShortMessageFactory>(&self) -> [Option<T>; 4] {
+    /// If this message has a 14-bit value, all returned short messages are `Some` and the given
+    /// data entry byte order is respected. If it has a 7-bit value only, the last short message is
+    /// `None`.
+    pub fn to_short_messages<T: ShortMessageFactory>(
+        &self,
+        data_entry_byte_order: DataEntryByteOrder,
+    ) -> [Option<T>; 4] {
         use crate::controller_numbers::*;
         let mut messages = [None, None, None, None];
         let mut i = 0;
@@ -167,32 +172,63 @@ impl ParameterNumberMessage {
             extract_low_7_bit_value_from_14_bit_value(self.number),
         ));
         i += 1;
-        // Value LSB
-        if self.is_14_bit {
-            messages[i] = Some(T::control_change(
-                self.channel,
-                DATA_ENTRY_MSB_LSB,
-                extract_low_7_bit_value_from_14_bit_value(self.value),
-            ));
-            i += 1;
-        }
-        // Value MSB
-        messages[i] = Some(T::control_change(
+        // Value bytes
+        use DataEntryByteOrder::*;
+        match data_entry_byte_order {
+            MsbFirst => {
+                // Value MSB
+                messages[i] = Some(self.build_data_entry_msb_msg());
+                i += 1;
+                // Value LSB
+                if self.is_14_bit {
+                    messages[i] = Some(self.build_data_entry_lsb_msg());
+                }
+            }
+            LsbFirst => {
+                // Value LSB
+                if self.is_14_bit {
+                    messages[i] = Some(self.build_data_entry_lsb_msg());
+                    i += 1;
+                }
+                // Value MSB
+                messages[i] = Some(self.build_data_entry_msb_msg());
+            }
+        };
+        messages
+    }
+
+    fn build_data_entry_msb_msg<T: ShortMessageFactory>(&self) -> T {
+        T::control_change(
             self.channel,
-            DATA_ENTRY_MSB,
+            crate::controller_numbers::DATA_ENTRY_MSB,
             if self.is_14_bit {
                 extract_high_7_bit_value_from_14_bit_value(self.value)
             } else {
                 U7(self.value.get() as u8)
             },
-        ));
-        messages
+        )
     }
+
+    fn build_data_entry_lsb_msg<T: ShortMessageFactory>(&self) -> T {
+        T::control_change(
+            self.channel,
+            crate::controller_numbers::DATA_ENTRY_MSB_LSB,
+            extract_low_7_bit_value_from_14_bit_value(self.value),
+        )
+    }
+}
+
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+pub enum DataEntryByteOrder {
+    /// Most significant byte first.
+    MsbFirst,
+    /// Least significant byte first.
+    LsbFirst,
 }
 
 impl<T: ShortMessageFactory> From<ParameterNumberMessage> for [Option<T>; 4] {
     fn from(msg: ParameterNumberMessage) -> Self {
-        msg.to_short_messages()
+        msg.to_short_messages(DataEntryByteOrder::MsbFirst)
     }
 }
 
@@ -213,14 +249,26 @@ mod tests {
         assert_eq!(msg.value(), u14(15000));
         assert!(msg.is_14_bit());
         assert!(msg.is_registered());
-        let short_msgs: [Option<RawShortMessage>; 4] = msg.to_short_messages();
+        let lsb_first_short_msgs: [Option<RawShortMessage>; 4] =
+            msg.to_short_messages(DataEntryByteOrder::LsbFirst);
         assert_eq!(
-            short_msgs,
+            lsb_first_short_msgs,
             [
                 Some(RawShortMessage::control_change(ch(0), cn(101), u7(3))),
                 Some(RawShortMessage::control_change(ch(0), cn(100), u7(36))),
                 Some(RawShortMessage::control_change(ch(0), cn(38), u7(24))),
                 Some(RawShortMessage::control_change(ch(0), cn(6), u7(117))),
+            ]
+        );
+        let msb_first_short_msgs: [Option<RawShortMessage>; 4] =
+            msg.to_short_messages(DataEntryByteOrder::MsbFirst);
+        assert_eq!(
+            msb_first_short_msgs,
+            [
+                Some(RawShortMessage::control_change(ch(0), cn(101), u7(3))),
+                Some(RawShortMessage::control_change(ch(0), cn(100), u7(36))),
+                Some(RawShortMessage::control_change(ch(0), cn(6), u7(117))),
+                Some(RawShortMessage::control_change(ch(0), cn(38), u7(24))),
             ]
         );
     }
@@ -242,9 +290,21 @@ mod tests {
         assert_eq!(msg.value(), u14(126));
         assert!(!msg.is_14_bit());
         assert!(!msg.is_registered());
-        let short_msgs: [Option<RawShortMessage>; 4] = msg.to_short_messages();
+        let lsb_first_short_msgs: [Option<RawShortMessage>; 4] =
+            msg.to_short_messages(DataEntryByteOrder::LsbFirst);
         assert_eq!(
-            short_msgs,
+            lsb_first_short_msgs,
+            [
+                Some(RawShortMessage::control_change(ch(2), cn(99), u7(3))),
+                Some(RawShortMessage::control_change(ch(2), cn(98), u7(37))),
+                Some(RawShortMessage::control_change(ch(2), cn(6), u7(126))),
+                None,
+            ]
+        );
+        let msb_first_short_msgs: [Option<RawShortMessage>; 4] =
+            msg.to_short_messages(DataEntryByteOrder::MsbFirst);
+        assert_eq!(
+            msb_first_short_msgs,
             [
                 Some(RawShortMessage::control_change(ch(2), cn(99), u7(3))),
                 Some(RawShortMessage::control_change(ch(2), cn(98), u7(37))),

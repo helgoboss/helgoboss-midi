@@ -8,6 +8,8 @@
 
 ### Changed
 
+- Changed method signature of `ParameterNumberMessage::to_short_messages` (added data entry byte order parameter).
+
 ### Deprecated
 
 ### Fixed
