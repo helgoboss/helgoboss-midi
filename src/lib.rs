@@ -1,5 +1,5 @@
 #![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
-#![doc(html_root_url = "https://docs.rs/helgoboss-midi/0.1.2")]
+#![doc(html_root_url = "https://docs.rs/helgoboss-midi/0.2.0")]
 
 //! Interfaces, data structures and utilities for dealing with MIDI messages.
 //!
