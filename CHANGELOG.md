@@ -14,6 +14,16 @@
 
 ### Security
 
+## 0.2.0 - 2021-21-02
+
+### Added
+
+- Added `PollingParameterNumberMessageScanner` for detecting of many more (N)RPN short message sequences.
+
+### Changed
+
+- Changed method signature of `ParameterNumberMessage::to_short_messages` (added data entry byte order parameter).
+
 ## 0.1.2 - 2020-12-06
 
 ### Fixed

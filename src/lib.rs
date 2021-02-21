@@ -1,5 +1,5 @@
 #![cfg_attr(all(not(feature = "std"), not(test)), no_std)]
-#![doc(html_root_url = "https://docs.rs/helgoboss-midi/0.1.2")]
+#![doc(html_root_url = "https://docs.rs/helgoboss-midi/0.2.0")]
 
 //! Interfaces, data structures and utilities for dealing with MIDI messages.
 //!
@@ -62,6 +62,11 @@ pub use parameter_number_message::*;
 
 mod parameter_number_message_scanner;
 pub use parameter_number_message_scanner::*;
+
+#[cfg(feature = "std")]
+mod polling_parameter_number_message_scanner;
+#[cfg(feature = "std")]
+pub use polling_parameter_number_message_scanner::*;
 
 // I added the _mod suffix because of intellij-rust issue 4992
 mod channel_mod;
