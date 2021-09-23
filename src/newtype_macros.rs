@@ -54,7 +54,7 @@ This function panics if `value` is greater than ", $max, "."
                 pub fn new(value: $repr) -> $name {
                     #[cfg(feature = "std")]
                     {
-                        assert!($name::is_valid(value), format!(concat!("{} is not a valid ", stringify!($name), " value"), value));
+                        assert!($name::is_valid(value), concat!("{} is not a valid ", stringify!($name), " value"), value);
                     }
                     #[cfg(feature = "no_std")]
                     {
