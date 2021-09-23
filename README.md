@@ -14,14 +14,14 @@ Add this to your `Cargo.toml`:
 
 ```toml
 [dependencies]
-helgoboss-midi = "0.2.0"
+helgoboss-midi = "0.3.0"
 ```
 
 If you want to use it in a `no_std` context, add this instead:
 
 ```toml
 [dependencies]
-helgoboss-midi = { version = "0.2.0", default-features = false }
+helgoboss-midi = { version = "0.3.0", default-features = false }
 ```
 
 The [documentation](https://docs.rs/helgoboss-midi) contains a feature list and usage examples.
