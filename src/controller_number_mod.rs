@@ -58,7 +58,7 @@ impl ControllerNumber {
     /// Returns whether this controller number is intended to be used to send part of a (N)RPN
     /// message.
     pub fn is_parameter_number_message_controller_number(&self) -> bool {
-        matches!(self.0, 98 | 99 | 100 | 101 | 38 | 6)
+        matches!(self.0, 98 | 99 | 100 | 101 | 38 | 6 | 96 | 97)
     }
 
     /// Returns whether this controller number is intended to be used to send Channel Mode

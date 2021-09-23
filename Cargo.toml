@@ -1,6 +1,6 @@
 [package]
 name = "helgoboss-midi"
-version = "0.3.0"
+version = "0.3.1"
 authors = ["Benjamin Klum <benjamin.klum@helgoboss.org>"]
 license = "MIT"
 description = "Interfaces, data structures and utilities for dealing with MIDI messages according to the MIDI 1.0 specification"

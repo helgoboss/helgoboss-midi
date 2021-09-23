@@ -14,6 +14,13 @@
 
 ### Security
 
+## 0.3.1 - 2021-09-23
+
+### Fixed
+
+- Fixed `ControllerNumber::is_parameter_number_message_controller_number` to include increment/decrement 
+  controller numbers.
+
 ## 0.3.0 - 2021-09-23
 
 ### Added
@@ -38,6 +45,7 @@
 ## 0.1.2 - 2020-12-06
 
 ### Fixed
+
 - Fixed version references in `README.md` and `lib.rs`.
 
 ## 0.1.1 - 2020-12-06
