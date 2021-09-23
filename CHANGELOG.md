@@ -14,7 +14,18 @@
 
 ### Security
 
-## 0.2.0 - 2021-21-02
+## 0.3.0 - 2021-09-23
+
+### Added
+
+- Added support for working with (N)RPN data increment/decrement messages.
+
+### Changed
+
+- Changed method signature of `PollingParameterNumberMessageScanner::feed` (now returns an
+  array instead of just an option).
+
+## 0.2.0 - 2021-02-21
 
 ### Added
 

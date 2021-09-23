@@ -1,6 +1,7 @@
 use crate::{
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
-    ShortMessageFactory, U14, U7,
+    controller_numbers, extract_high_7_bit_value_from_14_bit_value,
+    extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, ShortMessageFactory, U14,
+    U7,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -49,19 +50,20 @@ pub struct ParameterNumberMessage {
     value: U14,
     is_registered: bool,
     is_14_bit: bool,
+    data_type: DataType,
 }
 
 impl ParameterNumberMessage {
-    /// Creates an NRPN message with a 7-bit value.
+    /// Creates an NRPN message with a 7-bit data-entry value.
     pub fn non_registered_7_bit(
         channel: Channel,
         number: U14,
         value: U7,
     ) -> ParameterNumberMessage {
-        Self::seven_bit(channel, number, value, false)
+        Self::seven_bit(channel, number, value, false, DataType::DataEntry)
     }
 
-    /// Creates an NRPN message with a 14-bit value.
+    /// Creates an NRPN message with a 14-bit data-entry value.
     pub fn non_registered_14_bit(
         channel: Channel,
         number: U14,
@@ -70,14 +72,50 @@ impl ParameterNumberMessage {
         Self::fourteen_bit(channel, number, value, false)
     }
 
-    /// Creates an RPN message with a 7-bit value.
-    pub fn registered_7_bit(channel: Channel, number: U14, value: U7) -> ParameterNumberMessage {
-        Self::seven_bit(channel, number, value, true)
+    /// Creates an NRPN message with a data decrement value.
+    pub fn non_registered_decrement(
+        channel: Channel,
+        number: U14,
+        value: U7,
+    ) -> ParameterNumberMessage {
+        Self::seven_bit(channel, number, value, false, DataType::DataDecrement)
     }
 
-    /// Creates an RPN message with a 14-bit value.
+    /// Creates an NRPN message with a data increment value.
+    pub fn non_registered_increment(
+        channel: Channel,
+        number: U14,
+        value: U7,
+    ) -> ParameterNumberMessage {
+        Self::seven_bit(channel, number, value, false, DataType::DataIncrement)
+    }
+
+    /// Creates an RPN message with a 7-bit data-entry value.
+    pub fn registered_7_bit(channel: Channel, number: U14, value: U7) -> ParameterNumberMessage {
+        Self::seven_bit(channel, number, value, true, DataType::DataEntry)
+    }
+
+    /// Creates an RPN message with a 14-bit data-entry value.
     pub fn registered_14_bit(channel: Channel, number: U14, value: U14) -> ParameterNumberMessage {
         Self::fourteen_bit(channel, number, value, true)
+    }
+
+    /// Creates an RPN message with a data decrement value.
+    pub fn registered_decrement(
+        channel: Channel,
+        number: U14,
+        value: U7,
+    ) -> ParameterNumberMessage {
+        Self::seven_bit(channel, number, value, true, DataType::DataDecrement)
+    }
+
+    /// Creates an RPN message with a data increment value.
+    pub fn registered_increment(
+        channel: Channel,
+        number: U14,
+        value: U7,
+    ) -> ParameterNumberMessage {
+        Self::seven_bit(channel, number, value, true, DataType::DataIncrement)
     }
 
     pub(crate) fn seven_bit(
@@ -85,6 +123,7 @@ impl ParameterNumberMessage {
         number: U14,
         value: U7,
         is_registered: bool,
+        data_type: DataType,
     ) -> ParameterNumberMessage {
         ParameterNumberMessage {
             channel,
@@ -92,6 +131,7 @@ impl ParameterNumberMessage {
             value: value.into(),
             is_registered,
             is_14_bit: false,
+            data_type,
         }
     }
 
@@ -107,6 +147,8 @@ impl ParameterNumberMessage {
             value,
             is_registered,
             is_14_bit: true,
+            // 14-bit value always means data entry.
+            data_type: DataType::DataEntry,
         }
     }
 
@@ -137,6 +179,11 @@ impl ParameterNumberMessage {
         self.is_registered
     }
 
+    /// Returns the data type of the value in this message.
+    pub fn data_type(&self) -> DataType {
+        self.data_type
+    }
+
     /// Translates this message into up to 4 short Control Change messages, which need to be sent in
     /// a row in order to encode this (N)RPN message.
     ///
@@ -147,7 +194,7 @@ impl ParameterNumberMessage {
         &self,
         data_entry_byte_order: DataEntryByteOrder,
     ) -> [Option<T>; 4] {
-        use crate::controller_numbers::*;
+        use controller_numbers::*;
         let mut messages = [None, None, None, None];
         let mut i = 0;
         // Number MSB
@@ -173,34 +220,45 @@ impl ParameterNumberMessage {
         ));
         i += 1;
         // Value bytes
-        use DataEntryByteOrder::*;
-        match data_entry_byte_order {
-            MsbFirst => {
-                // Value MSB
-                messages[i] = Some(self.build_data_entry_msb_msg());
-                i += 1;
-                // Value LSB
-                if self.is_14_bit {
-                    messages[i] = Some(self.build_data_entry_lsb_msg());
-                }
+        use DataType::*;
+        match self.data_type {
+            DataEntry => {
+                use DataEntryByteOrder::*;
+                match data_entry_byte_order {
+                    MsbFirst => {
+                        // Value MSB
+                        messages[i] = Some(self.build_data_entry_msb_msg());
+                        i += 1;
+                        // Value LSB
+                        if self.is_14_bit {
+                            messages[i] = Some(self.build_data_entry_lsb_msg());
+                        }
+                    }
+                    LsbFirst => {
+                        // Value LSB
+                        if self.is_14_bit {
+                            messages[i] = Some(self.build_data_entry_lsb_msg());
+                            i += 1;
+                        }
+                        // Value MSB
+                        messages[i] = Some(self.build_data_entry_msb_msg());
+                    }
+                };
             }
-            LsbFirst => {
-                // Value LSB
-                if self.is_14_bit {
-                    messages[i] = Some(self.build_data_entry_lsb_msg());
-                    i += 1;
-                }
-                // Value MSB
-                messages[i] = Some(self.build_data_entry_msb_msg());
+            DataIncrement => {
+                messages[i] = Some(self.build_data_inc_dec_msg(controller_numbers::DATA_INCREMENT))
             }
-        };
+            DataDecrement => {
+                messages[i] = Some(self.build_data_inc_dec_msg(controller_numbers::DATA_DECREMENT))
+            }
+        }
         messages
     }
 
     fn build_data_entry_msb_msg<T: ShortMessageFactory>(&self) -> T {
         T::control_change(
             self.channel,
-            crate::controller_numbers::DATA_ENTRY_MSB,
+            controller_numbers::DATA_ENTRY_MSB,
             if self.is_14_bit {
                 extract_high_7_bit_value_from_14_bit_value(self.value)
             } else {
@@ -212,18 +270,39 @@ impl ParameterNumberMessage {
     fn build_data_entry_lsb_msg<T: ShortMessageFactory>(&self) -> T {
         T::control_change(
             self.channel,
-            crate::controller_numbers::DATA_ENTRY_MSB_LSB,
+            controller_numbers::DATA_ENTRY_MSB_LSB,
+            extract_low_7_bit_value_from_14_bit_value(self.value),
+        )
+    }
+
+    fn build_data_inc_dec_msg<T: ShortMessageFactory>(&self, cn: ControllerNumber) -> T {
+        T::control_change(
+            self.channel,
+            cn,
             extract_low_7_bit_value_from_14_bit_value(self.value),
         )
     }
 }
 
+/// The desired byte order of a data entry value.
 #[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
 pub enum DataEntryByteOrder {
     /// Most significant byte first.
     MsbFirst,
     /// Least significant byte first.
     LsbFirst,
+}
+
+/// Type of the value that is encoded in a parameter number message.
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug)]
+#[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
+pub enum DataType {
+    /// An absolute value.
+    DataEntry,
+    /// An increment relative from the current value.
+    DataIncrement,
+    /// A decrement relative from the current value.
+    DataDecrement,
 }
 
 impl<T: ShortMessageFactory> From<ParameterNumberMessage> for [Option<T>; 4] {
@@ -249,6 +328,7 @@ mod tests {
         assert_eq!(msg.value(), u14(15000));
         assert!(msg.is_14_bit());
         assert!(msg.is_registered());
+        assert_eq!(msg.data_type(), DataType::DataEntry);
         let lsb_first_short_msgs: [Option<RawShortMessage>; 4] =
             msg.to_short_messages(DataEntryByteOrder::LsbFirst);
         assert_eq!(
@@ -274,12 +354,6 @@ mod tests {
     }
 
     #[test]
-    #[should_panic]
-    fn parameter_number_messages_7_bit_panic() {
-        ParameterNumberMessage::non_registered_7_bit(ch(0), u14(420), u7(255));
-    }
-
-    #[test]
     fn parameter_number_messages_7_bit() {
         // Given
         let msg = ParameterNumberMessage::non_registered_7_bit(ch(2), u14(421), u7(126));
@@ -290,6 +364,7 @@ mod tests {
         assert_eq!(msg.value(), u14(126));
         assert!(!msg.is_14_bit());
         assert!(!msg.is_registered());
+        assert_eq!(msg.data_type(), DataType::DataEntry);
         let lsb_first_short_msgs: [Option<RawShortMessage>; 4] =
             msg.to_short_messages(DataEntryByteOrder::LsbFirst);
         assert_eq!(
@@ -309,6 +384,78 @@ mod tests {
                 Some(RawShortMessage::control_change(ch(2), cn(99), u7(3))),
                 Some(RawShortMessage::control_change(ch(2), cn(98), u7(37))),
                 Some(RawShortMessage::control_change(ch(2), cn(6), u7(126))),
+                None,
+            ]
+        );
+    }
+
+    #[test]
+    fn parameter_number_messages_increment() {
+        // Given
+        let msg = ParameterNumberMessage::non_registered_increment(ch(2), u14(421), u7(126));
+        // When
+        // Then
+        assert_eq!(msg.channel(), ch(2));
+        assert_eq!(msg.number(), u14(421));
+        assert_eq!(msg.value(), u14(126));
+        assert!(!msg.is_14_bit());
+        assert!(!msg.is_registered());
+        assert_eq!(msg.data_type(), DataType::DataIncrement);
+        let lsb_first_short_msgs: [Option<RawShortMessage>; 4] =
+            msg.to_short_messages(DataEntryByteOrder::LsbFirst);
+        assert_eq!(
+            lsb_first_short_msgs,
+            [
+                Some(RawShortMessage::control_change(ch(2), cn(99), u7(3))),
+                Some(RawShortMessage::control_change(ch(2), cn(98), u7(37))),
+                Some(RawShortMessage::control_change(ch(2), cn(96), u7(126))),
+                None,
+            ]
+        );
+        let msb_first_short_msgs: [Option<RawShortMessage>; 4] =
+            msg.to_short_messages(DataEntryByteOrder::MsbFirst);
+        assert_eq!(
+            msb_first_short_msgs,
+            [
+                Some(RawShortMessage::control_change(ch(2), cn(99), u7(3))),
+                Some(RawShortMessage::control_change(ch(2), cn(98), u7(37))),
+                Some(RawShortMessage::control_change(ch(2), cn(96), u7(126))),
+                None,
+            ]
+        );
+    }
+
+    #[test]
+    fn parameter_number_messages_decrement() {
+        // Given
+        let msg = ParameterNumberMessage::registered_decrement(ch(0), u14(420), u7(1));
+        // When
+        // Then
+        assert_eq!(msg.channel(), ch(0));
+        assert_eq!(msg.number(), u14(420));
+        assert_eq!(msg.value(), u14(1));
+        assert!(!msg.is_14_bit());
+        assert!(msg.is_registered());
+        assert_eq!(msg.data_type(), DataType::DataDecrement);
+        let lsb_first_short_msgs: [Option<RawShortMessage>; 4] =
+            msg.to_short_messages(DataEntryByteOrder::LsbFirst);
+        assert_eq!(
+            lsb_first_short_msgs,
+            [
+                Some(RawShortMessage::control_change(ch(0), cn(101), u7(3))),
+                Some(RawShortMessage::control_change(ch(0), cn(100), u7(36))),
+                Some(RawShortMessage::control_change(ch(0), cn(97), u7(1))),
+                None,
+            ]
+        );
+        let msb_first_short_msgs: [Option<RawShortMessage>; 4] =
+            msg.to_short_messages(DataEntryByteOrder::MsbFirst);
+        assert_eq!(
+            msb_first_short_msgs,
+            [
+                Some(RawShortMessage::control_change(ch(0), cn(101), u7(3))),
+                Some(RawShortMessage::control_change(ch(0), cn(100), u7(36))),
+                Some(RawShortMessage::control_change(ch(0), cn(97), u7(1))),
                 None,
             ]
         );

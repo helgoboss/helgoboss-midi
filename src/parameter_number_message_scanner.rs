@@ -1,17 +1,17 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, Channel, ParameterNumberMessage, ShortMessage,
-    StructuredShortMessage, U7,
+    build_14_bit_value_from_two_7_bit_values, Channel, DataType, ParameterNumberMessage,
+    ShortMessage, StructuredShortMessage, U14, U7,
 };
 
 /// Scanner for detecting (N)RPN messages in a stream of short messages without polling.
 ///
 /// Supports the following message sequences (`x` and `y` represent the bytes that make up the
-/// parameter number):
+/// parameter number, MSB represents either a data entry MSB or an increment/decrement value):
 ///
-/// - `[x, y, MSB]`: Interpreted as 7-bit message.
-/// - `[x, y, LSB, MSB]`: Interpreted as 14-bit message.
-/// - `[x, y, MSB, MSB, ...]`: Interpreted as 7-bit messages.
-/// - `[x, y, LSB, MSB, LSB, MSB, ...]`: Interpreted as 14-bit messages.
+/// - `[x, y, MSB]`: Interpreted as 7-bit data entry or increment/decrement message.
+/// - `[x, y, LSB, MSB]`: Interpreted as 14-bit data entry message.
+/// - `[x, y, MSB, MSB, ...]`: Interpreted as 7-bit data entry or increment/decrement messages.
+/// - `[x, y, LSB, MSB, LSB, MSB, ...]`: Interpreted as 14-bit data entry messages.
 ///
 /// # Example
 ///
@@ -85,6 +85,8 @@ impl ScannerForOneChannel {
                 101 => self.process_number_msb(control_value, true),
                 38 => self.process_value_lsb(control_value),
                 6 => self.process_value_msb(channel, control_value),
+                96 => self.process_value_inc_dec(channel, DataType::DataIncrement, control_value),
+                97 => self.process_value_inc_dec(channel, DataType::DataDecrement, control_value),
                 _ => None,
             },
             _ => None,
@@ -130,9 +132,7 @@ impl ScannerForOneChannel {
         channel: Channel,
         value_msb: U7,
     ) -> Option<ParameterNumberMessage> {
-        let number_lsb = self.number_lsb?;
-        let number_msb = self.number_msb?;
-        let number = build_14_bit_value_from_two_7_bit_values(number_msb, number_lsb);
+        let number = self.build_number()?;
         let msg = match self.value_lsb {
             Some(value_lsb) => ParameterNumberMessage::fourteen_bit(
                 channel,
@@ -140,15 +140,44 @@ impl ScannerForOneChannel {
                 build_14_bit_value_from_two_7_bit_values(value_msb, value_lsb),
                 self.is_registered,
             ),
-            None => {
-                ParameterNumberMessage::seven_bit(channel, number, value_msb, self.is_registered)
-            }
+            None => ParameterNumberMessage::seven_bit(
+                channel,
+                number,
+                value_msb,
+                self.is_registered,
+                DataType::DataEntry,
+            ),
         };
+        Some(msg)
+    }
+
+    fn process_value_inc_dec(
+        &mut self,
+        channel: Channel,
+        data_type: DataType,
+        value: U7,
+    ) -> Option<ParameterNumberMessage> {
+        let number = self.build_number()?;
+        let msg = ParameterNumberMessage::seven_bit(
+            channel,
+            number,
+            value,
+            self.is_registered,
+            data_type,
+        );
         Some(msg)
     }
 
     fn reset_value(&mut self) {
         self.value_lsb = None;
+    }
+
+    fn build_number(&self) -> Option<U14> {
+        let number_lsb = self.number_lsb?;
+        let number_msb = self.number_msb?;
+        Some(build_14_bit_value_from_two_7_bit_values(
+            number_msb, number_lsb,
+        ))
     }
 }
 
@@ -179,7 +208,7 @@ mod tests {
     }
 
     #[test]
-    fn x_y_msb() {
+    fn x_y_msb_entry() {
         // Given
         let mut scanner = ParameterNumberMessageScanner::new();
         // When
@@ -192,6 +221,48 @@ mod tests {
         assert_eq!(
             result_3,
             Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
+    }
+
+    #[test]
+    fn x_y_msb_increment() {
+        // Given
+        let mut scanner = ParameterNumberMessageScanner::new();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(96), u7(126)));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(
+            result_3,
+            Some(ParameterNumberMessage::non_registered_increment(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
+    }
+
+    #[test]
+    fn x_y_msb_decrement() {
+        // Given
+        let mut scanner = ParameterNumberMessageScanner::new();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(97), u7(126)));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(
+            result_3,
+            Some(ParameterNumberMessage::non_registered_decrement(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -223,7 +294,7 @@ mod tests {
     }
 
     #[test]
-    fn x_y_msb_msb() {
+    fn x_y_msb_msb_entry() {
         // Given
         let mut scanner = ParameterNumberMessageScanner::new();
         // When
@@ -248,6 +319,114 @@ mod tests {
                 ch(2),
                 u14(421),
                 u7(125)
+            ))
+        );
+    }
+
+    #[test]
+    fn x_y_msb_msb_increment() {
+        // Given
+        let mut scanner = ParameterNumberMessageScanner::new();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(96), u7(126)));
+        let result_4 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(96), u7(125)));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(
+            result_3,
+            Some(ParameterNumberMessage::non_registered_increment(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
+        assert_eq!(
+            result_4,
+            Some(ParameterNumberMessage::non_registered_increment(
+                ch(2),
+                u14(421),
+                u7(125)
+            ))
+        );
+    }
+
+    #[test]
+    fn x_y_msb_msb_decrement() {
+        // Given
+        let mut scanner = ParameterNumberMessageScanner::new();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(97), u7(126)));
+        let result_4 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(97), u7(125)));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(
+            result_3,
+            Some(ParameterNumberMessage::non_registered_decrement(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
+        assert_eq!(
+            result_4,
+            Some(ParameterNumberMessage::non_registered_decrement(
+                ch(2),
+                u14(421),
+                u7(125)
+            ))
+        );
+    }
+
+    #[test]
+    fn x_y_msb_msb_entry_inc_dec() {
+        // Given
+        let mut scanner = ParameterNumberMessageScanner::new();
+        // When
+        let result_1 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(99), u7(3)));
+        let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
+        let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(126)));
+        let result_4 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(125)));
+        let result_5 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(96), u7(126)));
+        let result_6 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(97), u7(5)));
+        // Then
+        assert_eq!(result_1, None);
+        assert_eq!(result_2, None);
+        assert_eq!(
+            result_3,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
+        assert_eq!(
+            result_4,
+            Some(ParameterNumberMessage::non_registered_7_bit(
+                ch(2),
+                u14(421),
+                u7(125)
+            ))
+        );
+        assert_eq!(
+            result_5,
+            Some(ParameterNumberMessage::non_registered_increment(
+                ch(2),
+                u14(421),
+                u7(126)
+            ))
+        );
+        assert_eq!(
+            result_6,
+            Some(ParameterNumberMessage::non_registered_decrement(
+                ch(2),
+                u14(421),
+                u7(5)
             ))
         );
     }
