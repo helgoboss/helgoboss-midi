@@ -1,6 +1,6 @@
 [package]
 name = "helgoboss-midi"
-version = "0.3.2"
+version = "0.3.3"
 authors = ["Benjamin Klum <benjamin.klum@helgoboss.org>"]
 license = "MIT"
 description = "Interfaces, data structures and utilities for dealing with MIDI messages according to the MIDI 1.0 specification"
@@ -23,4 +23,4 @@ version-sync = "0.9.2"
 
 [features]
 default = ["std"]
-std = []
+std = ["core-error/std"]

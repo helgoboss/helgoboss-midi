@@ -14,6 +14,13 @@
 
 ### Security
 
+## 0.3.3 - 2021-10-15
+
+### Fixed
+
+- Fixed compatibility with `std::error::Error`: Error types were not implementing the standard error trait
+  before even when building with the `std` feature enabled. Now they do.
+
 ## 0.3.2 - 2021-09-23
 
 ### Fixed

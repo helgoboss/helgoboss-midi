@@ -1101,6 +1101,13 @@ mod tests {
         }
     }
 
+    #[cfg(feature = "std")]
+    #[test]
+    fn std_error_compatible() -> Result<(), Box<dyn std::error::Error>> {
+        let _: Channel = 10.try_into()?;
+        Ok(())
+    }
+
     fn assert_equal_results(first: &impl ShortMessage, second: &impl ShortMessage) {
         assert_eq!(first.status_byte(), second.status_byte());
         assert_eq!(first.data_byte_1(), second.data_byte_1());
