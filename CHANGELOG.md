@@ -12,10 +12,14 @@
 
 ### Removed
 
-- Removed `core-error` dependency because it sometimes leads to build issues. As a consequence, errors don't implement its
-  Error trait in no-std environments.
-
 ### Security
+
+## 0.4.0 - 2022-06-08
+
+### Removed
+
+- Removed `core-error` dependency because it sometimes leads to build issues. As a consequence, errors don't implement 
+  an Error trait in no-std environments.
 
 ## 0.3.3 - 2021-10-15
 
