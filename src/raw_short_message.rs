@@ -1,6 +1,5 @@
 use crate::{FromBytesError, ShortMessage, ShortMessageFactory, U7};
 use core::convert::TryFrom;
-use derive_more::Into;
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -30,7 +29,7 @@ use serde::{Deserialize, Serialize};
 /// assert_eq!(msg.controller_number(), None);
 /// assert_eq!(msg.control_value(), None);
 /// ```
-#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, Into)]
+#[derive(Copy, Clone, Eq, PartialEq, Hash, Debug, derive_more::Into)]
 #[cfg_attr(feature = "serde", derive(Serialize, Deserialize))]
 pub struct RawShortMessage((u8, U7, U7));
 
