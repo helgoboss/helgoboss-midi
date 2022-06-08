@@ -12,7 +12,8 @@ use derive_more::Display;
 #[display(fmt = "invalid MIDI message bytes")]
 pub struct FromBytesError(pub(crate) ());
 
-impl core_error::Error for FromBytesError {}
+#[cfg(feature = "std")]
+impl std::error::Error for FromBytesError {}
 
 /// Static methods for creating short MIDI messages.
 ///
