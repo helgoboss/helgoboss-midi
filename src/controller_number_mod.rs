@@ -55,6 +55,13 @@ impl ControllerNumber {
         Some(ControllerNumber(self.0 + 32))
     }
 
+    pub fn corresponding_14_bit_msb_controller_number(&self) -> Option<ControllerNumber> {
+        if self.0 < 32 {
+            return None;
+        }
+        Some(ControllerNumber(self.0 - 32))
+    }
+
     /// Returns whether this controller number is intended to be used to send part of a (N)RPN
     /// message.
     pub fn is_parameter_number_message_controller_number(&self) -> bool {
