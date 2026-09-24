@@ -1,7 +1,4 @@
-use crate::{
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel,
-    ControllerNumber, ShortMessageFactory, U14,
-};
+use crate::{extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, ShortMessageFactory, U14};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -77,6 +74,14 @@ impl ControlChange14BitMessage {
         self.channel
     }
 
+    /// Returns a new message with the channel replaced.
+    pub fn with_channel(self, channel: Channel) -> Self {
+        Self {
+            channel,
+            ..self
+        }
+    }
+
     /// Returns the controller number for transmitting the most significant byte of this message.
     pub fn msb_controller_number(&self) -> ControllerNumber {
         self.msb_controller_number
@@ -94,6 +99,14 @@ impl ControlChange14BitMessage {
         self.value
     }
 
+    /// Returns a new message with the value replaced.
+    pub fn with_value(self, value: U14) -> Self {
+        Self {
+            value,
+            ..self
+        }
+    }
+    
     /// Translates this message into 2 short messages, which need to be sent in a row in order to
     /// encode this 14-bit Control Change message.
     pub fn to_short_messages<T: ShortMessageFactory>(&self) -> [T; 2] {

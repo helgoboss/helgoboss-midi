@@ -39,6 +39,9 @@
 mod newtype_macros;
 pub use newtype_macros::*;
 
+mod scanner_commons;
+pub use scanner_commons::*;
+
 mod short_message;
 pub use short_message::*;
 
@@ -62,6 +65,12 @@ pub use parameter_number_message::*;
 
 mod parameter_number_message_scanner;
 pub use parameter_number_message_scanner::*;
+
+mod midi_message;
+pub use midi_message::*;
+
+mod midi_message_scanner;
+pub use midi_message_scanner::*;
 
 #[cfg(feature = "std")]
 mod polling_parameter_number_message_scanner;

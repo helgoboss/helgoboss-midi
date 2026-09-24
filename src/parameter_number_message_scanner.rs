@@ -1,7 +1,4 @@
-use crate::{
-    build_14_bit_value_from_two_7_bit_values, Channel, DataType, ParameterNumberMessage,
-    ShortMessage, StructuredShortMessage, U14, U7,
-};
+use crate::{build_14_bit_value_from_two_7_bit_values, Channel, DataType, ParameterNumberMessage, ScanOutcome, ShortMessage, StructuredShortMessage, U14, U7};
 
 /// Scanner for detecting (N)RPN messages in a stream of short messages without polling.
 ///
@@ -17,19 +14,19 @@ use crate::{
 ///
 /// ```
 /// use helgoboss_midi::test_util::{control_change, channel, u14};
-/// use helgoboss_midi::{ParameterNumberMessage, ParameterNumberMessageScanner};
+/// use helgoboss_midi::{ParameterNumberMessage, ParameterNumberMessageScanner, ScanOutcome};
 ///
 /// let mut scanner = ParameterNumberMessageScanner::new();
 /// let result_1 = scanner.feed(&control_change(0, 101, 3));
 /// let result_2 = scanner.feed(&control_change(0, 100, 36));
 /// let result_3 = scanner.feed(&control_change(0, 38, 24));
 /// let result_4 = scanner.feed(&control_change(0, 6, 117));
-/// assert_eq!(result_1, None);
-/// assert_eq!(result_2, None);
-/// assert_eq!(result_3, None);
+/// assert_eq!(result_1, ScanOutcome::Consumed);
+/// assert_eq!(result_2, ScanOutcome::Consumed);
+/// assert_eq!(result_3, ScanOutcome::Consumed);
 /// assert_eq!(
 ///     result_4,
-///     Some(ParameterNumberMessage::registered_14_bit(
+///     ScanOutcome::Complete(ParameterNumberMessage::registered_14_bit(
 ///         channel(0),
 ///         u14(420),
 ///         u14(15000)
@@ -50,8 +47,10 @@ impl ParameterNumberMessageScanner {
     /// Feeds the scanner a single short message.
     ///
     /// Returns the (N)RPN message if one has been detected.
-    pub fn feed(&mut self, msg: &impl ShortMessage) -> Option<ParameterNumberMessage> {
-        let channel = msg.channel()?;
+    pub fn feed(&mut self, msg: &impl ShortMessage) -> ScanOutcome<ParameterNumberMessage> {
+        let Some(channel) = msg.channel() else {
+            return ScanOutcome::Unhandled;
+        };
         self.scanner_by_channel[usize::from(channel)].feed(msg)
     }
 
@@ -72,7 +71,7 @@ struct ScannerForOneChannel {
 }
 
 impl ScannerForOneChannel {
-    pub fn feed(&mut self, msg: &impl ShortMessage) -> Option<ParameterNumberMessage> {
+    pub fn feed(&mut self, msg: &impl ShortMessage) -> ScanOutcome<ParameterNumberMessage> {
         match msg.to_structured() {
             StructuredShortMessage::ControlChange {
                 channel,
@@ -87,9 +86,9 @@ impl ScannerForOneChannel {
                 6 => self.process_value_msb(channel, control_value),
                 96 => self.process_value_inc_dec(channel, DataType::DataIncrement, control_value),
                 97 => self.process_value_inc_dec(channel, DataType::DataDecrement, control_value),
-                _ => None,
+                _ => ScanOutcome::Unhandled,
             },
-            _ => None,
+            _ => ScanOutcome::Unhandled,
         }
     }
 
@@ -104,35 +103,37 @@ impl ScannerForOneChannel {
         &mut self,
         number_lsb: U7,
         is_registered: bool,
-    ) -> Option<ParameterNumberMessage> {
+    ) -> ScanOutcome<ParameterNumberMessage> {
         self.reset_value();
         self.number_lsb = Some(number_lsb);
         self.is_registered = is_registered;
-        None
+        ScanOutcome::Consumed
     }
 
     fn process_number_msb(
         &mut self,
         number_msb: U7,
         is_registered: bool,
-    ) -> Option<ParameterNumberMessage> {
+    ) -> ScanOutcome<ParameterNumberMessage> {
         self.reset_value();
         self.number_msb = Some(number_msb);
         self.is_registered = is_registered;
-        None
+        ScanOutcome::Consumed
     }
 
-    fn process_value_lsb(&mut self, value_lsb: U7) -> Option<ParameterNumberMessage> {
+    fn process_value_lsb(&mut self, value_lsb: U7) -> ScanOutcome<ParameterNumberMessage> {
         self.value_lsb = Some(value_lsb);
-        None
+        ScanOutcome::Consumed
     }
 
     fn process_value_msb(
         &mut self,
         channel: Channel,
         value_msb: U7,
-    ) -> Option<ParameterNumberMessage> {
-        let number = self.build_number()?;
+    ) -> ScanOutcome<ParameterNumberMessage> {
+        let Some(number) = self.build_number() else {
+          return ScanOutcome::Unhandled;
+        };
         let msg = match self.value_lsb {
             Some(value_lsb) => ParameterNumberMessage::fourteen_bit(
                 channel,
@@ -148,7 +149,7 @@ impl ScannerForOneChannel {
                 DataType::DataEntry,
             ),
         };
-        Some(msg)
+        ScanOutcome::Complete(msg)
     }
 
     fn process_value_inc_dec(
@@ -156,8 +157,10 @@ impl ScannerForOneChannel {
         channel: Channel,
         data_type: DataType,
         value: U7,
-    ) -> Option<ParameterNumberMessage> {
-        let number = self.build_number()?;
+    ) -> ScanOutcome<ParameterNumberMessage> {
+        let Some(number) = self.build_number() else {
+            return ScanOutcome::Unhandled;
+        };
         let msg = ParameterNumberMessage::seven_bit(
             channel,
             number,
@@ -165,7 +168,7 @@ impl ScannerForOneChannel {
             self.is_registered,
             data_type,
         );
-        Some(msg)
+        ScanOutcome::Complete(msg)
     }
 
     fn reset_value(&mut self) {
@@ -195,15 +198,15 @@ mod tests {
         // Then
         assert_eq!(
             scanner.feed(&RawShortMessage::note_on(ch(0), key_number(100), u7(100))),
-            None
+            ScanOutcome::Unhandled
         );
         assert_eq!(
             scanner.feed(&RawShortMessage::note_on(ch(0), key_number(100), u7(120))),
-            None
+            ScanOutcome::Unhandled
         );
         assert_eq!(
             scanner.feed(&RawShortMessage::control_change(ch(0), cn(80), u7(1))),
-            None
+            ScanOutcome::Unhandled
         );
     }
 
@@ -216,11 +219,11 @@ mod tests {
         let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(126)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
         assert_eq!(
             result_3,
-            Some(ParameterNumberMessage::non_registered_7_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -237,11 +240,11 @@ mod tests {
         let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(96), u7(126)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
         assert_eq!(
             result_3,
-            Some(ParameterNumberMessage::non_registered_increment(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_increment(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -258,11 +261,11 @@ mod tests {
         let result_2 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(97), u7(126)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
         assert_eq!(
             result_3,
-            Some(ParameterNumberMessage::non_registered_decrement(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_decrement(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -280,12 +283,12 @@ mod tests {
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(38), u7(24)));
         let result_4 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
-        assert_eq!(result_3, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
+        assert_eq!(result_3, ScanOutcome::Consumed);
         assert_eq!(
             result_4,
-            Some(ParameterNumberMessage::registered_14_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::registered_14_bit(
                 ch(0),
                 u14(420),
                 u14(15000)
@@ -303,11 +306,11 @@ mod tests {
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(126)));
         let result_4 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(125)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
         assert_eq!(
             result_3,
-            Some(ParameterNumberMessage::non_registered_7_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -315,7 +318,7 @@ mod tests {
         );
         assert_eq!(
             result_4,
-            Some(ParameterNumberMessage::non_registered_7_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
                 u7(125)
@@ -333,11 +336,11 @@ mod tests {
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(96), u7(126)));
         let result_4 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(96), u7(125)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
         assert_eq!(
             result_3,
-            Some(ParameterNumberMessage::non_registered_increment(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_increment(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -345,7 +348,7 @@ mod tests {
         );
         assert_eq!(
             result_4,
-            Some(ParameterNumberMessage::non_registered_increment(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_increment(
                 ch(2),
                 u14(421),
                 u7(125)
@@ -363,11 +366,11 @@ mod tests {
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(97), u7(126)));
         let result_4 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(97), u7(125)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
         assert_eq!(
             result_3,
-            Some(ParameterNumberMessage::non_registered_decrement(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_decrement(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -375,7 +378,7 @@ mod tests {
         );
         assert_eq!(
             result_4,
-            Some(ParameterNumberMessage::non_registered_decrement(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_decrement(
                 ch(2),
                 u14(421),
                 u7(125)
@@ -395,11 +398,11 @@ mod tests {
         let result_5 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(96), u7(126)));
         let result_6 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(97), u7(5)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
         assert_eq!(
             result_3,
-            Some(ParameterNumberMessage::non_registered_7_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -407,7 +410,7 @@ mod tests {
         );
         assert_eq!(
             result_4,
-            Some(ParameterNumberMessage::non_registered_7_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
                 u7(125)
@@ -415,7 +418,7 @@ mod tests {
         );
         assert_eq!(
             result_5,
-            Some(ParameterNumberMessage::non_registered_increment(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_increment(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -423,7 +426,7 @@ mod tests {
         );
         assert_eq!(
             result_6,
-            Some(ParameterNumberMessage::non_registered_decrement(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_decrement(
                 ch(2),
                 u14(421),
                 u7(5)
@@ -443,21 +446,21 @@ mod tests {
         let result_5 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(98), u7(37)));
         let result_6 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(125)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
         assert_eq!(
             result_3,
-            Some(ParameterNumberMessage::non_registered_7_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
                 u7(126)
             ))
         );
-        assert_eq!(result_4, None);
-        assert_eq!(result_5, None);
+        assert_eq!(result_4, ScanOutcome::Consumed);
+        assert_eq!(result_5, ScanOutcome::Consumed);
         assert_eq!(
             result_6,
-            Some(ParameterNumberMessage::non_registered_7_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
                 u7(125)
@@ -477,21 +480,21 @@ mod tests {
         let result_5 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(38), u7(23)));
         let result_6 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
-        assert_eq!(result_3, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
+        assert_eq!(result_3, ScanOutcome::Consumed);
         assert_eq!(
             result_4,
-            Some(ParameterNumberMessage::registered_14_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::registered_14_bit(
                 ch(0),
                 u14(420),
                 u14(15000)
             ))
         );
-        assert_eq!(result_5, None);
+        assert_eq!(result_5, ScanOutcome::Consumed);
         assert_eq!(
             result_6,
-            Some(ParameterNumberMessage::registered_14_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::registered_14_bit(
                 ch(0),
                 u14(420),
                 u14(14999)
@@ -513,23 +516,23 @@ mod tests {
         let result_7 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(38), u7(23)));
         let result_8 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
-        assert_eq!(result_3, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
+        assert_eq!(result_3, ScanOutcome::Consumed);
         assert_eq!(
             result_4,
-            Some(ParameterNumberMessage::registered_14_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::registered_14_bit(
                 ch(0),
                 u14(420),
                 u14(15000)
             ))
         );
-        assert_eq!(result_5, None);
-        assert_eq!(result_6, None);
-        assert_eq!(result_7, None);
+        assert_eq!(result_5, ScanOutcome::Consumed);
+        assert_eq!(result_6, ScanOutcome::Consumed);
+        assert_eq!(result_7, ScanOutcome::Consumed);
         assert_eq!(
             result_8,
-            Some(ParameterNumberMessage::registered_14_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::registered_14_bit(
                 ch(0),
                 u14(420),
                 u14(14999)
@@ -550,22 +553,22 @@ mod tests {
         let result_6 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(126)));
         let result_7 = scanner.feed(&RawShortMessage::control_change(ch(0), cn(6), u7(117)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_3, None);
-        assert_eq!(result_5, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_3, ScanOutcome::Consumed);
+        assert_eq!(result_5, ScanOutcome::Consumed);
         assert_eq!(
             result_7,
-            Some(ParameterNumberMessage::registered_14_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::registered_14_bit(
                 ch(0),
                 u14(420),
                 u14(15000)
             ))
         );
-        assert_eq!(result_2, None);
-        assert_eq!(result_4, None);
+        assert_eq!(result_2, ScanOutcome::Consumed);
+        assert_eq!(result_4, ScanOutcome::Consumed);
         assert_eq!(
             result_6,
-            Some(ParameterNumberMessage::non_registered_7_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
                 u7(126)
@@ -585,11 +588,11 @@ mod tests {
         scanner.feed(&RawShortMessage::control_change(ch(2), cn(50), u7(6)));
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(2), cn(6), u7(126)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
         assert_eq!(
             result_3,
-            Some(ParameterNumberMessage::non_registered_7_bit(
+            ScanOutcome::Complete(ParameterNumberMessage::non_registered_7_bit(
                 ch(2),
                 u14(421),
                 u7(126)

@@ -1,6 +1,7 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, extract_channel_from_status_byte, Channel,
-    ControllerNumber, KeyNumber, ShortMessageFactory, StructuredShortMessage, U14, U4, U7,
+    ControllerNumber, KeyNumber, ShortMessageFactory, StructuredShortMessage, U14, U4,
+    U7,
 };
 use core::convert::{TryFrom, TryInto};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -8,6 +9,7 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde_repr")]
 use serde_repr::{Deserialize_repr, Serialize_repr};
+use crate::bit_util::{extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value};
 
 /// A single short MIDI message, where *short* means it's made up by a maximum of 3 bytes.
 ///
@@ -196,6 +198,27 @@ pub trait ShortMessage {
         Some(extract_channel_from_status_byte(self.status_byte()))
     }
 
+    /// Returns a new message with the channel replaced.
+    ///
+    /// Returns `None` if this is not a channel message.
+    fn with_channel(&self, new_channel: Channel) -> Option<Self>
+    where
+        Self: ShortMessageFactory + Sized + Clone,
+    {
+        let Some(channel) = self.channel() else {
+            // Not a channel message
+            return None;
+        };
+        if channel == new_channel {
+            // Channel is already correct
+            return Some(self.clone());
+        }
+        let (b1, b2, b3) = self.to_bytes();
+        let status_byte_with_channel_zero = b1 & 0xf0;
+        let transformed_bytes = (status_byte_with_channel_zero + new_channel.get(), b2, b3);
+        Self::from_bytes(transformed_bytes).ok()
+    }
+
     /// Returns the key number of this message if applicable.
     fn key_number(&self) -> Option<KeyNumber> {
         use ShortMessageType::*;
@@ -253,10 +276,64 @@ pub trait ShortMessage {
         if self.r#type() != ShortMessageType::PitchBendChange {
             return None;
         }
-        Some(build_14_bit_value_from_two_7_bit_values(
-            self.data_byte_2(),
-            self.data_byte_1(),
-        ))
+        let value =
+            build_14_bit_value_from_two_7_bit_values(self.data_byte_2(), self.data_byte_1());
+        Some(value)
+    }
+
+    /// Returns the generic number for MIDI messages that have one.
+    fn number(&self) -> Option<U7> {
+        use ShortMessageType as T;
+        match self.r#type() {
+            T::NoteOff | T::NoteOn | T::PolyphonicKeyPressure | T::ControlChange => {
+                Some(self.data_byte_1())
+            }
+            T::ProgramChange | T::ChannelPressure | T::PitchBendChange => None,
+            _ => None,
+        }
+    }
+
+    /// Returns the generic value for MIDI messages that have one.
+    fn value(&self) -> Option<U14> {
+        use ShortMessageType as T;
+        match self.r#type() {
+            T::NoteOff | T::NoteOn | T::PolyphonicKeyPressure | T::ControlChange => {
+                Some(self.data_byte_2().into())
+            }
+            T::ProgramChange | T::ChannelPressure => Some(self.data_byte_1().into()),
+            T::PitchBendChange => {
+                let value = build_14_bit_value_from_two_7_bit_values(
+                    self.data_byte_2(),
+                    self.data_byte_1(),
+                );
+                Some(value)
+            }
+            _ => None,
+        }
+    }
+
+    /// Returns a new message with the value replaced.
+    ///
+    /// Returns `None` if this is a message without value or the value is too high.
+    fn with_value(&self, new_value: U14) -> Option<Self>
+    where
+        Self: ShortMessageFactory + Sized + Clone,
+    {
+        let (b1, b2, b3) = self.to_bytes();
+        use ShortMessageType as T;
+        let (new_b2, new_b3) = match self.r#type() {
+            T::NoteOff | T::NoteOn | T::PolyphonicKeyPressure | T::ControlChange => {
+                (b2, new_value.try_into().ok()?)
+            }
+            T::ProgramChange | T::ChannelPressure => {
+                (new_value.try_into().ok()?, b3)
+            },
+            T::PitchBendChange => {
+                (extract_low_7_bit_value_from_14_bit_value(new_value), extract_high_7_bit_value_from_14_bit_value(new_value))
+            }
+            _ => return None,
+        };
+        Self::from_bytes((b1, new_b2, new_b3)).ok()
     }
 }
 
@@ -556,6 +633,78 @@ mod tests {
                 channel: ch(1),
                 key_number: key_number(64),
                 velocity: u7(100),
+            }
+        );
+        assert!(msg.is_note());
+        assert!(msg.is_note_on());
+        assert!(!msg.is_note_off());
+    }
+
+    #[test]
+    fn with_channel() {
+        // Given
+        let original_msg = RawShortMessage::from_bytes((145, u7(64), u7(100))).unwrap();
+        // When
+        let msg = original_msg.with_channel(ch(2));
+        // Then
+        let msg = msg.unwrap();
+        assert_eq!(core::mem::size_of::<RawShortMessage>(), 3);
+        assert_eq!(msg.status_byte(), 146);
+        assert_eq!(msg.data_byte_1(), u7(64));
+        assert_eq!(msg.data_byte_2(), u7(100));
+        assert_eq!(msg.r#type(), ShortMessageType::NoteOn);
+        assert_eq!(msg.super_type(), MessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(2)));
+        assert_eq!(msg.key_number(), Some(key_number(64)));
+        assert_eq!(msg.velocity(), Some(u7(100)));
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
+        assert_eq!(
+            msg.to_structured(),
+            StructuredShortMessage::NoteOn {
+                channel: ch(2),
+                key_number: key_number(64),
+                velocity: u7(100),
+            }
+        );
+        assert!(msg.is_note());
+        assert!(msg.is_note_on());
+        assert!(!msg.is_note_off());
+    }
+
+    #[test]
+    fn with_value() {
+        // Given
+        let original_msg = RawShortMessage::from_bytes((145, u7(64), u7(100))).unwrap();
+        // When
+        let msg = original_msg.with_value(u14(33));
+        // Then
+        let msg = msg.unwrap();
+        assert_eq!(core::mem::size_of::<RawShortMessage>(), 3);
+        assert_eq!(msg.status_byte(), 145);
+        assert_eq!(msg.data_byte_1(), u7(64));
+        assert_eq!(msg.data_byte_2(), u7(33));
+        assert_eq!(msg.r#type(), ShortMessageType::NoteOn);
+        assert_eq!(msg.super_type(), MessageSuperType::ChannelVoice);
+        assert_eq!(msg.main_category(), MessageMainCategory::Channel);
+        assert_eq!(msg.channel(), Some(ch(1)));
+        assert_eq!(msg.key_number(), Some(key_number(64)));
+        assert_eq!(msg.velocity(), Some(u7(33)));
+        assert_eq!(msg.controller_number(), None);
+        assert_eq!(msg.control_value(), None);
+        assert_eq!(msg.pitch_bend_value(), None);
+        assert_eq!(msg.pressure_amount(), None);
+        assert_eq!(msg.program_number(), None);
+        assert_eq!(
+            msg.to_structured(),
+            StructuredShortMessage::NoteOn {
+                channel: ch(1),
+                key_number: key_number(64),
+                velocity: u7(33),
             }
         );
         assert!(msg.is_note());

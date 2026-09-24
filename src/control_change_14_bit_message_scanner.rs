@@ -1,6 +1,6 @@
 use crate::{
     build_14_bit_value_from_two_7_bit_values, Channel, ControlChange14BitMessage, ControllerNumber,
-    ShortMessage, StructuredShortMessage, U7,
+    ScanOutcome, ShortMessage, StructuredShortMessage, U7,
 };
 
 /// Scanner for detecting 14-bit Control Change messages in a stream of short MIDI messages.
@@ -9,17 +9,15 @@ use crate::{
 ///
 /// ```
 /// use helgoboss_midi::test_util::control_change;
-/// use helgoboss_midi::{
-///     Channel, ControlChange14BitMessage, ControlChange14BitMessageScanner, ControllerNumber, U14,
-/// };
+/// use helgoboss_midi::{Channel, ControlChange14BitMessage, ControlChange14BitMessageScanner, ControllerNumber, ScanOutcome, U14};
 ///
 /// let mut scanner = ControlChange14BitMessageScanner::new();
 /// let result_1 = scanner.feed(&control_change(5, 2, 8));
 /// let result_2 = scanner.feed(&control_change(5, 34, 33));
-/// assert_eq!(result_1, None);
+/// assert_eq!(result_1, ScanOutcome::Consumed);
 /// assert_eq!(
 ///     result_2,
-///     Some(ControlChange14BitMessage::new(
+///     ScanOutcome::Complete(ControlChange14BitMessage::new(
 ///         Channel::new(5),
 ///         ControllerNumber::new(2),
 ///         U14::new(1057)
@@ -40,8 +38,10 @@ impl ControlChange14BitMessageScanner {
     /// Feeds the scanner a single short message.
     ///
     /// Returns the 14-bit Control Change message if one has been detected.  
-    pub fn feed(&mut self, msg: &impl ShortMessage) -> Option<ControlChange14BitMessage> {
-        let channel = msg.channel()?;
+    pub fn feed(&mut self, msg: &impl ShortMessage) -> ScanOutcome<ControlChange14BitMessage> {
+        let Some(channel) = msg.channel() else {
+            return ScanOutcome::Unhandled;
+        };
         self.scanner_by_channel[usize::from(channel)].feed(msg)
     }
 
@@ -60,7 +60,7 @@ struct ScannerForOneChannel {
 }
 
 impl ScannerForOneChannel {
-    fn feed(&mut self, msg: &impl ShortMessage) -> Option<ControlChange14BitMessage> {
+    fn feed(&mut self, msg: &impl ShortMessage) -> ScanOutcome<ControlChange14BitMessage> {
         match msg.to_structured() {
             StructuredShortMessage::ControlChange {
                 controller_number,
@@ -69,9 +69,9 @@ impl ScannerForOneChannel {
             } => match controller_number.get() {
                 (0..=31) => self.process_value_msb(controller_number, control_value),
                 (32..=63) => self.process_value_lsb(channel, controller_number, control_value),
-                _ => None,
+                _ => ScanOutcome::Unhandled,
             },
-            _ => None,
+            _ => ScanOutcome::Unhandled,
         }
     }
 
@@ -84,10 +84,10 @@ impl ScannerForOneChannel {
         &mut self,
         msb_controller_number: ControllerNumber,
         value_msb: U7,
-    ) -> Option<ControlChange14BitMessage> {
+    ) -> ScanOutcome<ControlChange14BitMessage> {
         self.msb_controller_number = Some(msb_controller_number);
         self.value_msb = Some(value_msb);
-        None
+        ScanOutcome::Consumed
     }
 
     fn process_value_lsb(
@@ -95,22 +95,22 @@ impl ScannerForOneChannel {
         channel: Channel,
         lsb_controller_number: ControllerNumber,
         value_lsb: U7,
-    ) -> Option<ControlChange14BitMessage> {
-        let msb_controller_number = self.msb_controller_number?;
-        let value_msb = self.value_msb?;
-        if lsb_controller_number
-            != msb_controller_number
-                .corresponding_14_bit_lsb_controller_number()
-                .expect("impossible")
-        {
-            return None;
+    ) -> ScanOutcome<ControlChange14BitMessage> {
+        let Some(msb_controller_number) = self.msb_controller_number else {
+            return ScanOutcome::Unhandled;
+        };
+        let Some(value_msb) = self.value_msb else {
+            return ScanOutcome::Unhandled;
+        };
+        let corresponding_14_bit_lsb_cc_number = msb_controller_number
+            .corresponding_14_bit_lsb_controller_number()
+            .expect("corresponding 14-bit LSB CC number should be set");
+        if lsb_controller_number != corresponding_14_bit_lsb_cc_number {
+            return ScanOutcome::Unhandled;
         }
         let value = build_14_bit_value_from_two_7_bit_values(value_msb, value_lsb);
-        Some(ControlChange14BitMessage::new(
-            channel,
-            msb_controller_number,
-            value,
-        ))
+        let msg = ControlChange14BitMessage::new(channel, msb_controller_number, value);
+        ScanOutcome::Complete(msg)
     }
 }
 
@@ -128,15 +128,15 @@ mod tests {
         // Then
         assert_eq!(
             scanner.feed(&RawShortMessage::note_on(ch(0), key_number(100), u7(100))),
-            None
+            ScanOutcome::Unhandled
         );
         assert_eq!(
             scanner.feed(&RawShortMessage::note_on(ch(0), key_number(100), u7(120))),
-            None
+            ScanOutcome::Unhandled
         );
         assert_eq!(
             scanner.feed(&RawShortMessage::control_change(ch(0), cn(80), u7(1))),
-            None
+            ScanOutcome::Unhandled
         );
     }
 
@@ -148,8 +148,10 @@ mod tests {
         let result_1 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(2), u7(8)));
         let result_2 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(34), u7(33)));
         // Then
-        assert_eq!(result_1, None);
-        let result_2 = result_2.unwrap();
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        let ScanOutcome::Complete(result_2) = result_2 else {
+            panic!("result_2 should be complete");
+        };
         assert_eq!(result_2.channel(), ch(5));
         assert_eq!(result_2.msb_controller_number(), cn(2));
         assert_eq!(result_2.lsb_controller_number(), cn(34));
@@ -166,14 +168,18 @@ mod tests {
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(34), u7(33)));
         let result_4 = scanner.feed(&RawShortMessage::control_change(ch(6), cn(35), u7(34)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
-        let result_3 = result_3.unwrap();
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
+        let ScanOutcome::Complete(result_3) = result_3 else {
+            panic!("result_3 should be complete");
+        };
         assert_eq!(result_3.channel(), ch(5));
         assert_eq!(result_3.msb_controller_number(), cn(2));
         assert_eq!(result_3.lsb_controller_number(), cn(34));
         assert_eq!(result_3.value(), u14(1057));
-        let result_4 = result_4.unwrap();
+        let ScanOutcome::Complete(result_4) = result_4 else {
+            panic!("result_4 should be complete");
+        };
         assert_eq!(result_4.channel(), ch(6));
         assert_eq!(result_4.msb_controller_number(), cn(3));
         assert_eq!(result_4.lsb_controller_number(), cn(35));
@@ -189,9 +195,11 @@ mod tests {
         let result_2 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(77), u7(9)));
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(34), u7(33)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
-        let result_3 = result_3.unwrap();
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Unhandled);
+        let ScanOutcome::Complete(result_3) = result_3 else {
+            panic!("result_3 should be complete");
+        };
         assert_eq!(result_3.channel(), ch(5));
         assert_eq!(result_3.msb_controller_number(), cn(2));
         assert_eq!(result_3.lsb_controller_number(), cn(34));
@@ -208,10 +216,12 @@ mod tests {
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(34), u7(33)));
         let result_4 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(35), u7(34)));
         // Then
-        assert_eq!(result_1, None);
-        assert_eq!(result_2, None);
-        assert_eq!(result_3, None);
-        let result_4 = result_4.unwrap();
+        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_2, ScanOutcome::Consumed);
+        assert_eq!(result_3, ScanOutcome::Unhandled);
+        let ScanOutcome::Complete(result_4) = result_4 else {
+            panic!("result_4 should be complete");
+        };
         assert_eq!(result_4.channel(), ch(5));
         assert_eq!(result_4.msb_controller_number(), cn(3));
         assert_eq!(result_4.lsb_controller_number(), cn(35));

@@ -157,6 +157,14 @@ impl ParameterNumberMessage {
         self.channel
     }
 
+    /// Returns a new message with the channel replaced.
+    pub fn with_channel(self, channel: Channel) -> Self {
+        Self {
+            channel,
+            ..self
+        }
+    }
+
     /// Returns the parameter number of this message.
     pub fn number(&self) -> U14 {
         self.number
@@ -167,6 +175,14 @@ impl ParameterNumberMessage {
     /// If it's just a 7-bit message, the value is <= 127.
     pub fn value(&self) -> U14 {
         self.value
+    }
+    
+    /// Returns a new message with the value replaced.
+    pub fn with_value(self, value: U14) -> Self {
+        Self {
+            value,
+            ..self
+        }
     }
 
     /// Returns `true` if this message has a 14-bit value and `false` if only a 7-bit value.
