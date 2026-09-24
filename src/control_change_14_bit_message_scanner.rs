@@ -14,7 +14,7 @@ use crate::{
 /// let mut scanner = ControlChange14BitMessageScanner::new();
 /// let result_1 = scanner.feed(&control_change(5, 2, 8));
 /// let result_2 = scanner.feed(&control_change(5, 34, 33));
-/// assert_eq!(result_1, ScanOutcome::Consumed);
+/// assert_eq!(result_1, ScanOutcome::Pending);
 /// assert_eq!(
 ///     result_2,
 ///     ScanOutcome::Complete(ControlChange14BitMessage::new(
@@ -87,7 +87,7 @@ impl ScannerForOneChannel {
     ) -> ScanOutcome<ControlChange14BitMessage> {
         self.msb_controller_number = Some(msb_controller_number);
         self.value_msb = Some(value_msb);
-        ScanOutcome::Consumed
+        ScanOutcome::Pending
     }
 
     fn process_value_lsb(
@@ -148,7 +148,7 @@ mod tests {
         let result_1 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(2), u7(8)));
         let result_2 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(34), u7(33)));
         // Then
-        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_1, ScanOutcome::Pending);
         let ScanOutcome::Complete(result_2) = result_2 else {
             panic!("result_2 should be complete");
         };
@@ -168,8 +168,8 @@ mod tests {
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(34), u7(33)));
         let result_4 = scanner.feed(&RawShortMessage::control_change(ch(6), cn(35), u7(34)));
         // Then
-        assert_eq!(result_1, ScanOutcome::Consumed);
-        assert_eq!(result_2, ScanOutcome::Consumed);
+        assert_eq!(result_1, ScanOutcome::Pending);
+        assert_eq!(result_2, ScanOutcome::Pending);
         let ScanOutcome::Complete(result_3) = result_3 else {
             panic!("result_3 should be complete");
         };
@@ -195,7 +195,7 @@ mod tests {
         let result_2 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(77), u7(9)));
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(34), u7(33)));
         // Then
-        assert_eq!(result_1, ScanOutcome::Consumed);
+        assert_eq!(result_1, ScanOutcome::Pending);
         assert_eq!(result_2, ScanOutcome::Unhandled);
         let ScanOutcome::Complete(result_3) = result_3 else {
             panic!("result_3 should be complete");
@@ -216,8 +216,8 @@ mod tests {
         let result_3 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(34), u7(33)));
         let result_4 = scanner.feed(&RawShortMessage::control_change(ch(5), cn(35), u7(34)));
         // Then
-        assert_eq!(result_1, ScanOutcome::Consumed);
-        assert_eq!(result_2, ScanOutcome::Consumed);
+        assert_eq!(result_1, ScanOutcome::Pending);
+        assert_eq!(result_2, ScanOutcome::Pending);
         assert_eq!(result_3, ScanOutcome::Unhandled);
         let ScanOutcome::Complete(result_4) = result_4 else {
             panic!("result_4 should be complete");

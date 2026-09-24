@@ -3,8 +3,8 @@
 pub enum ScanOutcome<T> {
     /// Input not relevant for the scanner.
     Unhandled,
-    /// Input consumed by the scanner and final result depends on the next input.
-    Consumed,
+    /// Input temporarily consumed by the scanner and final result depends on the next input.
+    Pending,
     /// Input consumed by the scanner and result is clear now.
     Complete(T),
 }
