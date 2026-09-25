@@ -1,4 +1,7 @@
-use crate::{extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, ShortMessageFactory, U14};
+use crate::{
+    Channel, ControllerNumber, ShortMessageFactory, U14,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
+};
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
 
@@ -59,9 +62,11 @@ impl ControlChange14BitMessage {
         msb_controller_number: ControllerNumber,
         value: U14,
     ) -> ControlChange14BitMessage {
-        assert!(msb_controller_number
-            .corresponding_14_bit_lsb_controller_number()
-            .is_some());
+        assert!(
+            msb_controller_number
+                .corresponding_14_bit_lsb_controller_number()
+                .is_some()
+        );
         ControlChange14BitMessage {
             channel,
             msb_controller_number,
@@ -76,10 +81,7 @@ impl ControlChange14BitMessage {
 
     /// Returns a new message with the channel replaced.
     pub fn with_channel(self, channel: Channel) -> Self {
-        Self {
-            channel,
-            ..self
-        }
+        Self { channel, ..self }
     }
 
     /// Returns the controller number for transmitting the most significant byte of this message.
@@ -101,12 +103,9 @@ impl ControlChange14BitMessage {
 
     /// Returns a new message with the value replaced.
     pub fn with_value(self, value: U14) -> Self {
-        Self {
-            value,
-            ..self
-        }
+        Self { value, ..self }
     }
-    
+
     /// Translates this message into 2 short messages, which need to be sent in a row in order to
     /// encode this 14-bit Control Change message.
     pub fn to_short_messages<T: ShortMessageFactory>(&self) -> [T; 2] {
@@ -134,8 +133,8 @@ impl<T: ShortMessageFactory> From<ControlChange14BitMessage> for [T; 2] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::{channel as ch, controller_number as cn, u14, u7};
     use crate::RawShortMessage;
+    use crate::test_util::{channel as ch, controller_number as cn, u7, u14};
 
     #[test]
     fn basics() {

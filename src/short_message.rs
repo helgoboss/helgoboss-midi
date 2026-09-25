@@ -1,7 +1,9 @@
+use crate::bit_util::{
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
+};
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, extract_channel_from_status_byte, Channel,
-    ControllerNumber, KeyNumber, ShortMessageFactory, StructuredShortMessage, U14, U4,
-    U7,
+    Channel, ControllerNumber, KeyNumber, ShortMessageFactory, StructuredShortMessage, U4, U7, U14,
+    build_14_bit_value_from_two_7_bit_values, extract_channel_from_status_byte,
 };
 use core::convert::{TryFrom, TryInto};
 use num_enum::{IntoPrimitive, TryFromPrimitive};
@@ -9,7 +11,6 @@ use num_enum::{IntoPrimitive, TryFromPrimitive};
 use serde::{Deserialize, Serialize};
 #[cfg(feature = "serde_repr")]
 use serde_repr::{Deserialize_repr, Serialize_repr};
-use crate::bit_util::{extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value};
 
 /// A single short MIDI message, where *short* means it's made up by a maximum of 3 bytes.
 ///
@@ -325,12 +326,11 @@ pub trait ShortMessage {
             T::NoteOff | T::NoteOn | T::PolyphonicKeyPressure | T::ControlChange => {
                 (b2, new_value.try_into().ok()?)
             }
-            T::ProgramChange | T::ChannelPressure => {
-                (new_value.try_into().ok()?, b3)
-            },
-            T::PitchBendChange => {
-                (extract_low_7_bit_value_from_14_bit_value(new_value), extract_high_7_bit_value_from_14_bit_value(new_value))
-            }
+            T::ProgramChange | T::ChannelPressure => (new_value.try_into().ok()?, b3),
+            T::PitchBendChange => (
+                extract_low_7_bit_value_from_14_bit_value(new_value),
+                extract_high_7_bit_value_from_14_bit_value(new_value),
+            ),
             _ => return None,
         };
         Self::from_bytes((b1, new_b2, new_b3)).ok()
@@ -601,7 +601,7 @@ fn build_byte_from_nibbles(high_nibble: u8, low_nibble: u8) -> u8 {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::{channel as ch, controller_number, key_number, u14, u7};
+    use crate::test_util::{channel as ch, controller_number, key_number, u7, u14};
     use crate::{RawShortMessage, ShortMessageFactory};
     #[cfg(feature = "serde")]
     use serde_json::json;

@@ -17,7 +17,7 @@
 //! ```
 use crate::{
     Channel, ControlChange14BitMessage, ControllerNumber, KeyNumber, ParameterNumberMessage,
-    RawShortMessage, ShortMessageFactory, TimeCodeQuarterFrame, U14, U4, U7,
+    RawShortMessage, ShortMessageFactory, TimeCodeQuarterFrame, U4, U7, U14,
 };
 use core::convert::TryInto;
 

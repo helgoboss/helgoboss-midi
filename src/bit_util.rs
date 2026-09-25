@@ -1,4 +1,4 @@
-use crate::{Channel, U14, U7};
+use crate::{Channel, U7, U14};
 
 pub fn extract_high_7_bit_value_from_14_bit_value(value: U14) -> U7 {
     U7(((value.get() >> 7) & 0x7f) as u8)

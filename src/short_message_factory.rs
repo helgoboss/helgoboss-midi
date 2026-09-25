@@ -1,7 +1,6 @@
 use crate::{
-    build_status_byte, extract_type_from_status_byte, Channel, ControllerNumber,
-    FuzzyMessageSuperType, KeyNumber, ShortMessage, ShortMessageType, TimeCodeQuarterFrame, U14,
-    U7,
+    Channel, ControllerNumber, FuzzyMessageSuperType, KeyNumber, ShortMessage, ShortMessageType,
+    TimeCodeQuarterFrame, U7, U14, build_status_byte, extract_type_from_status_byte,
 };
 use core::error::Error;
 

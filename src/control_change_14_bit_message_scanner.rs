@@ -1,6 +1,6 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, Channel, ControlChange14BitMessage, ControllerNumber,
-    ScanOutcome, ShortMessage, StructuredShortMessage, U7,
+    Channel, ControlChange14BitMessage, ControllerNumber, ScanOutcome, ShortMessage,
+    StructuredShortMessage, U7, build_14_bit_value_from_two_7_bit_values,
 };
 
 /// Scanner for detecting 14-bit Control Change messages in a stream of short MIDI messages.
@@ -117,7 +117,7 @@ impl ScannerForOneChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::{channel as ch, controller_number as cn, key_number, u14, u7};
+    use crate::test_util::{channel as ch, controller_number as cn, key_number, u7, u14};
     use crate::{RawShortMessage, ShortMessageFactory};
 
     #[test]

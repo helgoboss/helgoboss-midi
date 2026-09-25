@@ -1,7 +1,6 @@
 use crate::{
-    controller_numbers, extract_high_7_bit_value_from_14_bit_value,
-    extract_low_7_bit_value_from_14_bit_value, Channel, ControllerNumber, ShortMessageFactory, U14,
-    U7,
+    Channel, ControllerNumber, ShortMessageFactory, U7, U14, controller_numbers,
+    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
@@ -159,10 +158,7 @@ impl ParameterNumberMessage {
 
     /// Returns a new message with the channel replaced.
     pub fn with_channel(self, channel: Channel) -> Self {
-        Self {
-            channel,
-            ..self
-        }
+        Self { channel, ..self }
     }
 
     /// Returns the parameter number of this message.
@@ -176,13 +172,10 @@ impl ParameterNumberMessage {
     pub fn value(&self) -> U14 {
         self.value
     }
-    
+
     /// Returns a new message with the value replaced.
     pub fn with_value(self, value: U14) -> Self {
-        Self {
-            value,
-            ..self
-        }
+        Self { value, ..self }
     }
 
     /// Returns `true` if this message has a 14-bit value and `false` if only a 7-bit value.
@@ -330,8 +323,8 @@ impl<T: ShortMessageFactory> From<ParameterNumberMessage> for [Option<T>; 4] {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::{channel as ch, controller_number as cn, u14, u7};
     use crate::RawShortMessage;
+    use crate::test_util::{channel as ch, controller_number as cn, u7, u14};
 
     #[test]
     fn parameter_number_messages_14_bit() {

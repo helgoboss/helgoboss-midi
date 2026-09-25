@@ -1,6 +1,6 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, Channel, DataType, ParameterNumberMessage,
-    ShortMessage, StructuredShortMessage, U14, U7,
+    Channel, DataType, ParameterNumberMessage, ShortMessage, StructuredShortMessage, U7, U14,
+    build_14_bit_value_from_two_7_bit_values,
 };
 use core::time::Duration;
 use std::time::Instant;
@@ -551,7 +551,7 @@ impl ScannerForOneChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::{channel as ch, controller_number as cn, key_number, u14, u7};
+    use crate::test_util::{channel as ch, controller_number as cn, key_number, u7, u14};
     use crate::{RawShortMessage, ShortMessageFactory};
 
     #[test]

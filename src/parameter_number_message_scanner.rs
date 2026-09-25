@@ -1,4 +1,7 @@
-use crate::{build_14_bit_value_from_two_7_bit_values, Channel, DataType, ParameterNumberMessage, ScanOutcome, ShortMessage, StructuredShortMessage, U14, U7};
+use crate::{
+    Channel, DataType, ParameterNumberMessage, ScanOutcome, ShortMessage, StructuredShortMessage,
+    U7, U14, build_14_bit_value_from_two_7_bit_values,
+};
 
 /// Scanner for detecting (N)RPN messages in a stream of short messages without polling.
 ///
@@ -132,7 +135,7 @@ impl ScannerForOneChannel {
         value_msb: U7,
     ) -> ScanOutcome<ParameterNumberMessage> {
         let Some(number) = self.build_number() else {
-          return ScanOutcome::Unhandled;
+            return ScanOutcome::Unhandled;
         };
         let msg = match self.value_lsb {
             Some(value_lsb) => ParameterNumberMessage::fourteen_bit(
@@ -187,7 +190,7 @@ impl ScannerForOneChannel {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::test_util::{channel as ch, controller_number as cn, key_number, u14, u7};
+    use crate::test_util::{channel as ch, controller_number as cn, key_number, u7, u14};
     use crate::{RawShortMessage, ShortMessageFactory};
 
     #[test]

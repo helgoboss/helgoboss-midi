@@ -1,8 +1,8 @@
 use crate::{
-    build_14_bit_value_from_two_7_bit_values, build_status_byte, extract_channel_from_status_byte,
-    extract_high_7_bit_value_from_14_bit_value, extract_low_7_bit_value_from_14_bit_value,
-    extract_type_from_status_byte, Channel, ControllerNumber, KeyNumber, ShortMessage,
-    ShortMessageFactory, ShortMessageType, TimeCodeQuarterFrame, U14, U7,
+    Channel, ControllerNumber, KeyNumber, ShortMessage, ShortMessageFactory, ShortMessageType,
+    TimeCodeQuarterFrame, U7, U14, build_14_bit_value_from_two_7_bit_values, build_status_byte,
+    extract_channel_from_status_byte, extract_high_7_bit_value_from_14_bit_value,
+    extract_low_7_bit_value_from_14_bit_value, extract_type_from_status_byte,
 };
 #[cfg(feature = "serde")]
 use serde::{Deserialize, Serialize};
