@@ -84,7 +84,7 @@ impl<T> MidiMessageScanner<T> {
         }
     }
 
-    /// Resets the scanners and returns a maybe not yet processed previously-fed payload.    
+    /// Resets the scanners and returns a maybe not yet processed previously-fed payload.
     pub fn reset(&mut self) -> Option<T> {
         self.pn_scanner.reset();
         self.cc_14_bit_scanner.reset();
@@ -94,6 +94,9 @@ impl<T> MidiMessageScanner<T> {
 
 
 pub struct MidiMessageScannerOutcome<S: ShortMessage, T> {
+    /// Previously consumed short message that was either superseded by a new one or didn't
+    /// end up in a (N)RPN or 14-bit message.
     pub leftover: Option<T>,
+    /// The detected message.
     pub message: Option<MidiMessage<S>>,
 }
