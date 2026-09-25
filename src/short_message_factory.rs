@@ -3,6 +3,7 @@ use crate::{
     FuzzyMessageSuperType, KeyNumber, ShortMessage, ShortMessageType, TimeCodeQuarterFrame, U14,
     U7,
 };
+use core::error::Error;
 
 /// An error which can occur when trying to create a [`ShortMessage`] from raw bytes.
 ///
@@ -11,8 +12,7 @@ use crate::{
 #[display("invalid MIDI message bytes")]
 pub struct FromBytesError(pub(crate) ());
 
-#[cfg(feature = "std")]
-impl std::error::Error for FromBytesError {}
+impl Error for FromBytesError {}
 
 /// Static methods for creating short MIDI messages.
 ///

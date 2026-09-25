@@ -1,19 +1,19 @@
+use core::error::Error;
+
 /// An error which can occur when converting from a type with a greater value range to one with a
 /// smaller one.
 #[derive(Clone, Eq, PartialEq, Debug, derive_more::Display)]
 #[display("converting to type with smaller value range failed")]
 pub struct TryFromGreaterError(pub(crate) ());
 
-#[cfg(feature = "std")]
-impl std::error::Error for TryFromGreaterError {}
+impl Error for TryFromGreaterError {}
 
 /// An error which can occur when parsing a string to one of the MIDI integer types.
 #[derive(Clone, Eq, PartialEq, Debug, derive_more::Display)]
 #[display("parsing string to MIDI type failed")]
 pub struct ParseIntError(pub(crate) ());
 
-#[cfg(feature = "std")]
-impl std::error::Error for ParseIntError {}
+impl Error for ParseIntError {}
 
 /// Creates a new type which is represented by a primitive type but has a restricted value range.
 macro_rules! newtype {
@@ -54,14 +54,7 @@ macro_rules! newtype {
 This function panics if `value` is greater than ", $max, "."
                 ),
                 pub fn new(value: $repr) -> $name {
-                    #[cfg(feature = "std")]
-                    {
-                        assert!($name::is_valid(value), concat!("{} is not a valid ", stringify!($name), " value"), value);
-                    }
-                    #[cfg(feature = "no_std")]
-                    {
-                        assert!($name::is_valid(value), concat!("not a valid ", stringify!($name), " value"));
-                    }
+                    assert!($name::is_valid(value), concat!("{} is not a valid ", stringify!($name), " value"), value);
                     $name(value)
                 }
             }
