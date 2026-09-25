@@ -45,31 +45,27 @@ macro_rules! newtype {
                 number >= 0.into() && number <= $max.into()
             }
 
-            doc_comment::doc_comment! {
-                concat!(
-"Creates a ", stringify!($name), ".
-
-# Panics
-
-This function panics if `value` is greater than ", $max, "."
-                ),
-                pub fn new(value: $repr) -> $name {
-                    assert!($name::is_valid(value), concat!("{} is not a valid ", stringify!($name), " value"), value);
-                    $name(value)
-                }
+           #[doc = concat!("Creates a ", stringify!($name), ".")]
+            ///
+            /// # Panics
+            ///
+            /// Panics if `value` is not between [`Self::MIN`] and [`Self::MAX`], inclusive.
+            pub fn new(value: $repr) -> $name {
+                assert!(
+                    $name::is_valid(value),
+                    concat!("{} is not a valid ", stringify!($name), " value"),
+                    value
+                );
+                $name(value)
             }
 
-            doc_comment::doc_comment! {
-                concat!(
-"Creates a ", stringify!($name), " without checking `value`.
-
-# Safety
-
-`value` must not be greater than ", $max, "."
-                ),
-                pub const unsafe fn new_unchecked(value: $repr) -> $name {
-                    $name(value)
-                }
+            /// Creates a value without checking whether `value` is valid.
+            ///
+            /// # Safety
+            ///
+            /// `value` must be between [`Self::MIN`] and [`Self::MAX`], inclusive.
+            pub const unsafe fn new_unchecked(value: $repr) -> $name {
+                $name(value)
             }
 
             /// Returns the value as a primitive type.
