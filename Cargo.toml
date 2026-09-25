@@ -7,12 +7,12 @@ description = "Interfaces, data structures and utilities for dealing with MIDI m
 repository = "https://github.com/helgoboss/helgoboss-midi"
 readme = "README.md"
 keywords = ["midi"]
-edition = "2018"
+edition = "2024"
 categories = ["data-structures", "multimedia", "embedded", "no-std"]
 
 [dependencies]
-num_enum = { version = "0.5.1", default-features = false }
-derive_more = "0.99.11"
+num_enum = { version = "0.7.6", default-features = false }
+derive_more = { version = "2.1.1" , features = ["display", "into"]}
 serde = { version = "1.0", optional = true, features = ["derive"] }
 serde_repr = { version = "0.1.6", optional = true }
 doc-comment = "0.3.3"

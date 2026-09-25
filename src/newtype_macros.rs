@@ -1,7 +1,7 @@
 /// An error which can occur when converting from a type with a greater value range to one with a
 /// smaller one.
 #[derive(Clone, Eq, PartialEq, Debug, derive_more::Display)]
-#[display(fmt = "converting to type with smaller value range failed")]
+#[display("converting to type with smaller value range failed")]
 pub struct TryFromGreaterError(pub(crate) ());
 
 #[cfg(feature = "std")]
@@ -9,7 +9,7 @@ impl std::error::Error for TryFromGreaterError {}
 
 /// An error which can occur when parsing a string to one of the MIDI integer types.
 #[derive(Clone, Eq, PartialEq, Debug, derive_more::Display)]
-#[display(fmt = "parsing string to MIDI type failed")]
+#[display("parsing string to MIDI type failed")]
 pub struct ParseIntError(pub(crate) ());
 
 #[cfg(feature = "std")]

@@ -8,7 +8,7 @@ use crate::{
 ///
 /// [`ShortMessage`]: trait.ShortMessage.html
 #[derive(Clone, Eq, PartialEq, Debug, derive_more::Display)]
-#[display(fmt = "invalid MIDI message bytes")]
+#[display("invalid MIDI message bytes")]
 pub struct FromBytesError(pub(crate) ());
 
 #[cfg(feature = "std")]
